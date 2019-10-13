@@ -1,0 +1,301 @@
+*** ALMACEN ELIMINA TRANSACCIONES
+SELECT ALMTRA
+GO TOP
+IF EOF()
+   RETURN
+ENDIF
+SET ORDER TO 2
+@ 4,0 CLEAR
+STORE "ELIMINA MOVIMIENTOS DE ALMACEN" TO WHEADER
+@ 4,40 - (LEN(WHEADER)/2) SAY WHEADER
+@ 5,0
+@ 05,0 SAY "FECHA      CODIGO-DE-ARTICULO   TP DOUMENTO-No    CANTIDAD  COSTO-TOTAL ORG  ALM"
+@ 21,0 SAY "³PgUp=Pag.Arr³PgDn=Pag.Abj³Home=Inic³End=Final³=Ant.³=Sig.³ESC=Salir³Ù=Acep.³"
+*@ 6,0 TO 19,79
+SET COLOR TO W+/B
+STORE  "ELIMINAR   " TO XMENU1
+STORE  "BUSCAR     " TO XMENU2
+STORE 2 TO WMENU
+STORE .T. TO XFLAG
+
+STORE 12 TO WRANGO
+GO TOP
+STORE RECNO() TO WINICIO
+STORE 0 TO WREVERSE
+STORE 0 TO WEDILIN
+STORE .T. TO FLAGJUMP
+STORE .T. TO WEDITAR
+DO WHILE WEDITAR
+   IF FLAGJUMP
+      STORE 0       TO WCONT
+      STORE 07      TO WLINE
+      GO WINICIO
+      SET COLOR TO W+/B
+      @ 7,0 CLEAR TO 18,79
+      DO WHILE .NOT. EOF() .AND. WCONT < WRANGO
+         STORE WLINE+WCONT TO WSCRELIN
+         STORE WLINE+WCONT TO WLASTLIN
+         STORE RECNO() TO WLASTREC
+         SELECT ALMART
+         SEEK ALMTRA->CODIGO
+         IF FOUND()
+            STORE DESCRI                 TO WDESCRI
+            STORE ALMACEN                TO WALMACEN
+         ELSE
+            STORE "NO REG. EN ARTICULOS" TO WDESCRI
+            STORE "NO "                  TO WALMACEN
+         ENDIF
+         SELECT ALMTRA
+         @ WSCRELIN,0  SAY FECHA
+         @ WSCRELIN,11 SAY CODIGO
+         @ WSCRELIN,32 SAY OPERACION
+         @ WSCRELIN,35 SAY REFERENCIA
+         @ WSCRELIN,48 SAY UNIDADES PICTURE "#######.##"
+         @ WSCRELIN,60 SAY COSTO PICTURE "########.##"
+         @ WSCRELIN,72 SAY ORIGEN
+         @ WSCRELIN,77 SAY WALMACEN
+         STORE WCONT + 1 TO WCONT
+         SKIP
+      ENDDO
+      STORE .F. TO FLAGJUMP
+   ENDIF
+
+   IF WREVERSE = 0
+      STORE WLASTREC TO WREVERSE
+      STORE WLASTLIN TO WEDILIN
+      STORE WINICIO  TO WCLEARREC
+      STORE WLINE    TO WCLEARLIN
+   ENDIF
+
+   ** PARA BORRAR EL REGISTRO ANTERIOR
+   SET COLOR TO W+/B
+   GO WCLEARREC
+   STORE WCLEARLIN TO WSCRELIN
+   SELECT ALMART
+   SEEK ALMTRA->CODIGO
+   IF FOUND()
+      STORE DESCRI                 TO WDESCRI
+      STORE ALMACEN                TO WALMACEN
+   ELSE
+      STORE "NO REG. EN ARTICULOS" TO WDESCRI
+      STORE "NO "                  TO WALMACEN
+   ENDIF
+   SELECT ALMTRA
+   @ WSCRELIN,0  SAY FECHA
+   @ WSCRELIN,11 SAY CODIGO
+   @ WSCRELIN,32 SAY OPERACION
+   @ WSCRELIN,35 SAY REFERENCIA
+   @ WSCRELIN,48 SAY UNIDADES PICTURE "#######.##"
+   @ WSCRELIN,60 SAY COSTO PICTURE "########.##"
+   @ WSCRELIN,72 SAY ORIGEN
+   @ WSCRELIN,77 SAY WALMACEN
+   ** PARA MARCAR EL REGISTRO ACTUAL
+   SET COLOR TO B/W+
+   GO WREVERSE
+   STORE WEDILIN TO WSCRELIN
+   SELECT ALMART
+   SEEK ALMTRA->CODIGO
+   IF FOUND()
+      STORE DESCRI                 TO WDESCRI
+      STORE ALMACEN                TO WALMACEN
+   ELSE
+      STORE "NO REG. EN ARTICULOS" TO WDESCRI
+      STORE "NO "                  TO WALMACEN
+   ENDIF
+   SELECT ALMTRA
+   @ WSCRELIN,0  SAY FECHA
+   @ WSCRELIN,11 SAY CODIGO
+   @ WSCRELIN,32 SAY OPERACION
+   @ WSCRELIN,35 SAY REFERENCIA
+   @ WSCRELIN,48 SAY UNIDADES PICTURE "#######.##"
+   @ WSCRELIN,60 SAY COSTO PICTURE "########.##"
+   @ WSCRELIN,72 SAY ORIGEN
+   @ WSCRELIN,77 SAY WALMACEN
+   STORE WREVERSE TO WCLEARREC
+   STORE WSCRELIN TO WCLEARLIN
+
+   *** PARA INDICAR LA ROTACION DEL MENU (SI LA HUBO)
+   IF XFLAG
+      SET COLOR TO W+/B
+      @ 20,05 SAY  XMENU1
+      @ 20,20 SAY  XMENU2
+      SET COLOR TO B/W+
+      STORE "XMENU"+STR(WMENU,1) TO WMACRO
+      @ 20,5+((WMENU-1)*15)  SAY &WMACRO
+      STORE .F. TO XFLAG
+      SET COLOR TO W+/B
+   ENDIF
+
+   *** CAPTURA DE INTERACTIVIDAD
+   CLEAR TYPEAHEAD
+   STORE INKEY(0) TO WMUEVE
+   *** PAGE DOWN
+   IF WMUEVE = 3
+      GO WINICIO
+      SKIP +12
+      IF .NOT. EOF()
+         STORE RECNO() TO WINICIO
+         STORE .T.     TO FLAGJUMP
+         STORE WINICIO TO WREVERSE
+         STORE WLINE   TO WEDILIN
+         STORE WINICIO TO WCLEARREC
+         STORE WLINE   TO WCLEARLIN
+      ENDIF
+   ENDIF
+   *** PAGE UP
+   IF WMUEVE =  18
+      GO WINICIO
+      SKIP -12
+      STORE RECNO() TO WINICIO
+      STORE .T. TO FLAGJUMP
+      STORE 0 TO WREVERSE
+   ENDIF
+   *** HOME
+   IF WMUEVE = 1
+      GO TOP
+      IF .NOT. EOF()
+         STORE RECNO() TO WINICIO
+         STORE .T. TO FLAGJUMP
+         STORE WINICIO TO WREVERSE
+         STORE WLINE   TO WEDILIN
+         STORE WINICIO TO WCLEARREC
+         STORE WLINE   TO WCLEARLIN
+      ENDIF
+   ENDIF
+   *** END
+   IF WMUEVE = 6
+      GO BOTT
+      SKIP -11
+      STORE RECNO() TO WINICIO
+      STORE 0 TO WREVERSE
+      STORE .T. TO FLAGJUMP
+   ENDIF
+   *** DOWN ARROW
+   IF WMUEVE = 24
+      SKIP +1
+      IF WEDILIN < (WLINE+(WCONT-1))
+         STORE WREVERSE    TO WCLEARREC
+         STORE RECNO()     TO WREVERSE
+         STORE WEDILIN     TO WCLEARLIN
+         STORE WEDILIN + 1 TO WEDILIN
+      ENDIF
+   ENDIF
+   *** UP ARROW
+   IF WMUEVE = 5
+      SKIP -1
+      IF WEDILIN > WLINE
+         STORE WREVERSE    TO WCLEARREC
+         STORE RECNO()     TO WREVERSE
+         STORE WEDILIN     TO WCLEARLIN
+         STORE WEDILIN - 1 TO WEDILIN
+      ENDIF
+   ENDIF
+   *** RIGHT ARROW
+   IF WMUEVE = 4
+      STORE .T. TO XFLAG
+      STORE WMENU+1 TO WMENU
+      IF WMENU > 2
+         STORE 1 TO WMENU
+      ENDIF
+   ENDIF
+   *** LEFT ARROW
+   IF WMUEVE = 19
+      STORE .T. TO XFLAG
+      STORE WMENU-1 TO WMENU
+      IF WMENU < 1
+         STORE 2 TO WMENU
+      ENDIF
+   ENDIF
+   *** ESCAPE
+   IF WMUEVE = 27
+      STORE CODIGO TO WSEL
+      SELECT ALMTRA
+      SET ORDER TO 1
+      SET COLOR TO W+/B
+      RETURN
+   ENDIF
+   *** ENTER (INICIO DE OPERACIONES DE ACTUALIZACION DE DATOS
+   IF WMUEVE = 13
+      DO CASE
+         CASE WMENU = 1
+              IF ORIGEN<>"INV"
+                 STORE "ELIMINE DESDE EL MODULO QUE GENERO EL MOVIMIENTO" TO MES
+                 DO AVISO WITH MES
+                 LOOP
+              ENDIF
+              IF WALMACEN<>WUSERUBI
+                 STORE "ARTICULO PERTENECE A OTRO ALMACEN" TO MES
+                 DO AVISO WITH MES
+                 LOOP
+              ENDIF
+              STORE "ESTA SEGURO ? (S/N)" TO TEX
+              STORE "NS" TO WCH
+              DO PREGUNTA
+              IF WCH = "N"
+                 LOOP
+              ENDIF
+              STORE CODIGO TO WCODIGO
+              SELECT ALMART
+              FIND &WCODIGO
+              IF EOF()
+                 STORE "ERROR: CODIGO DE ART. DEL MOVIMIENTO NO DEFINIDO. (CREAR ARTICULO)" TO MES
+                 DO AVISO WITH MES
+                 LOOP
+              ELSE
+                 STORE .T. TO WFLAGACT
+                 REPLACE FLAGREPRO WITH "S"
+              ENDIF
+              SELECT ALMTRA
+              IF FILLOC()
+                 REPLACE USUARIO   WITH WUSERCODE
+                 REPLACE USUARIOF  WITH DATE()
+                 DELETE
+                 UNLOCK ALL
+                 GO TOP
+                 IF EOF()
+                    SET COLOR TO W+/B
+                    RETURN
+                 ENDIF
+              ENDIF
+              SKIP
+              IF .NOT. EOF()
+                 STORE RECNO() TO WINICIO
+                 STORE .T. TO FLAGJUMP
+                 STORE RECNO() TO WREVERSE
+                 STORE RECNO() TO WCLEARREC
+                 STORE WLINE   TO WEDILIN
+                 STORE WLINE   TO WCLEARLIN
+              ELSE
+                 GO TOP
+                 STORE RECNO() TO WINICIO
+                 STORE .T. TO FLAGJUMP
+                 STORE 0 TO WREVERSE
+             ENDIF
+         CASE WMENU = 2
+              SAVE SCRE TO S9
+              STORE CTOD("  -  -  ") TO WFECHA
+              @ WSCRELIN, 00 GET WFECHA
+              READ
+              IF WFECHA  <> CTOD("  -  -  ")
+                 STORE SUBS(DTOC(WFECHA),7,2)+SUBS(DTOC(WFECHA),4,2)+SUBS(DTOC(WFECHA),1,2) TO WCLAVE
+                 *STORE DTOC(WFECHA) TO WCLAVE
+                 FIND &WCLAVE
+                 IF .NOT. EOF()
+                    STORE RECNO() TO WINICIO
+                    STORE .T. TO FLAGJUMP
+                    STORE RECNO() TO WREVERSE
+                    STORE RECNO() TO WCLEARREC
+                    STORE WLINE   TO WEDILIN
+                    STORE WLINE   TO WCLEARLIN
+                 ELSE
+                    RESTORE SCRE FROM S9
+                 ENDIF
+              ELSE
+                 RESTORE SCRE FROM S9
+              ENDIF
+      ENDCASE
+   ENDIF
+ENDDO
+SET COLOR TO W+/B
+RETURN
+

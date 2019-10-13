@@ -1,0 +1,44 @@
+SELECT syspac
+STORE 05 TO LIBRCAR
+STORE 00 TO CIBRCAR
+on key label f4 do winbus
+DEFI WIND BRCAR FROM LIBRCAR,CIBRCAR TO LIBRCAR+19,CIBRCAR+79;
+                TITLE " BUSQUEDA DE NO-AFILIADOS POR No. DE HISTORIA ";
+                FOOTER " F4=Buscar historia, ESC=Seleccionar ";
+                DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND BRCAR
+SET ORDER TO syspac3
+BROWSE FIELDS CODPAC:H="CODIGO", PAPELLIDO:H="PRIMER APELLIDO", SAPELLIDO:H="SEGUNDO APELLIDO",;
+              PNOMBRE:H="PRIMER NOMBRE", SNOMBRE:H="SEGUNDO NOMBRE",;
+              SEXO:H="S", NACIMIENTO:H="FECHA NAC.";
+              NOAPPEND NODELETE NOEDIT NOMENU NOOPTIMIZE REST SAVE IN WINDOW BRCAR
+RELEASE WIND BRCAR
+STORE "B"    TO WTIPPAC
+STORE CODPAC TO WCODPAC, M.CODPAC
+SELECT syspac
+SET ORDER TO syspac
+RETURN
+
+procedure winbus
+DEFI WIND winbus FROM LIBRCAR+3,CIBRCAR TO LIBRCAR+5,CIBRCAR+79;
+                TITLE " BUSQUEDA DE NO-AFILIADOS POR No. DE HISTORIA ";
+                DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+acti wind winbus
+@ 00,00 clear
+store space(12) to WHISTORIA
+@ 00,00 get WHISTORIA
+read
+if lastkey()=27
+   rele wind winbus
+   return
+endif
+select syspac
+set order to syspac3
+seek WHISTORIA
+if .not. found()
+   store "NO EXISTE, VERIFIQUE" to wtext
+   do aviso with wtext
+endif
+rele wind winbus
+return
+

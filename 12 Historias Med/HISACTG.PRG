@@ -1,0 +1,177 @@
+IF WACCESO<>"A"
+   RETURN
+ENDIF
+SELECT 20
+USE
+*** FIN CONTROL DE ACCESO
+
+SELECT HISGRU
+DEFI WIND BRGRU FROM LIBRGRU,CIBRGRU TO LIBRGRU+10,CIBRGRU+70 ;
+                TITLE " ACTIVIDADES DE LA HISTORIA " ;
+                FOOTER " F1=Inc,F2=Mod,F3=Eli,F4=Bus,ESC=Sel ";
+                DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND BRGRU
+ON KEY LABEL F1 DO BRINC
+ON KEY LABEL F2 DO BRMOD
+ON KEY LABEL F3 DO BRELI
+ON KEY LABEL F4 DO BRBUS
+BROWSE FIELDS CODGRU:H="ACTIVIDAD", DESGRU:H="DESCRIPCION",UBIGRU:H="PUNTO",PROGRU:H="PROPIEDAD" ;
+              NOAPPEND NODELETE NOEDIT NOMENU NOOPTIMIZE REST SAVE IN WINDOW BRGRU
+RELEASE WIND BRGRU
+RETURN
+***********************
+***                 ***
+***RUTINAS DE BRGRU ***
+***                 ***
+***********************
+PROCEDURE BRINC
+DEFI WIND WINCGRU FROM LIBRGRU+5,CIBRGRU+10 TO LIBRGRU+12,CIBRGRU+55;
+                  TITLE " INCLUIR ACTIVIDAD " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WINCGRU
+DO WHILE .T.
+   SCAT MEMV BLANK
+   @ 00,00 CLEAR
+   @ 00,01 SAY "ACTIVIDAD  :"
+   @ 01,01 SAY "DESCRIPCION:"
+   @ 02,01 SAY "PTO.DE SERV:"
+   @ 03,01 SAY "PROPIEDAD  :"
+   @ 00,14 GET M.CODGRU
+   READ
+   IF LASTKEY()=27
+      EXIT
+   ENDIF
+   STORE M.CODGRU TO WCLAVE
+   IF LEN(TRIM(WCLAVE))=0
+      LOOP
+   ENDIF
+   SEEK WCLAVE
+   IF FOUND()
+      @ 01,14 SAY DESGRU
+      STORE "YA EXISTE, VERIFIQUE" TO WTEXT
+      DO AVISO WITH WTEXT
+      LOOP
+   ELSE
+      @ 01,14 GET M.DESGRU
+      @ 02,14 GET M.UBIGRU
+      @ 03,14 GET M.PROGRU PICTURE "@*H U;M"
+      READ
+      *** INICIO RUTINA DE ACEPTAR-CANCELAR
+      store 1 to wop
+      do while .t.
+         @ 05,12  get wop pict "@*H Aceptar;Cancelar" defa wop
+         read
+         if lastkey()=13
+            exit
+         endif
+      enddo
+      *** FIN  RUTINA ACEPTAR-CANCELAR
+      if wop=1
+         if filloc()
+            append blank
+            gath memvar
+            unlock all
+         else
+            store "OPERACION CANCELADA, REINTENTE" to wtext
+            do aviso with wtext
+         endif
+      endif
+   ENDIF
+ENDDO
+RELEASE WIND WINCGRU
+RETURN
+***
+PROCEDURE BRMOD
+DEFI WIND WMODGRU FROM LIBRGRU+5,CIBRGRU+10 TO LIBRGRU+12,CIBRGRU+55;
+                  TITLE " MODIFICAR ACTIVIDAD " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WMODGRU
+SCAT MEMVAR
+@ 00,01 SAY "ACTIVIDAD  :"
+@ 01,01 SAY "DESCRIPCION:"
+@ 02,01 SAY "PTO.DE SERV:"
+@ 03,01 SAY "PROPIEDAD  :"
+@ 00,14 SAY M.CODGRU
+@ 01,14 GET M.DESGRU
+@ 02,14 GET M.UBIGRU
+@ 03,14 GET M.PROGRU PICTURE "@*H U;M"
+READ
+*** INICIO RUTINA DE ACEPTAR-CANCELAR
+store 1 to wop
+do while .t.
+   @ 05,12  get wop pict "@*H Aceptar;Cancelar" defa wop
+   read
+   if lastkey()=13
+      exit
+   endif
+enddo
+*** FIN  RUTINA ACEPTAR-CANCELAR
+if wop=1
+   if recloc()
+      gath memvar
+      unlock all
+   else
+      store "OPERACION CANCELADA, REINTENTE" to wtext
+      do aviso with wtext
+   endif
+endif
+RELEASE WIND WMODGRU
+RETURN
+***
+PROCEDURE BRELI
+DEFI WIND WELIGRU FROM LIBRGRU+5,CIBRGRU+10 TO LIBRGRU+12,CIBRGRU+55;
+                  TITLE " ELIMINAR ACTIVIDAD " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WELIGRU
+SCAT MEMVAR
+@ 00,01 SAY "ACTIVIDAD  :"
+@ 01,01 SAY "DESCRIPCION:"
+@ 00,14 SAY M.CODGRU
+@ 01,14 SAY M.DESGRU
+*** INICIO RUTINA DE ACEPTAR-CANCELAR
+store 2 to wop
+do while .t.
+   @ 03,12  get wop pict "@*H Aceptar;Cancelar" defa wop
+   read
+   if lastkey()=13
+      exit
+   endif
+enddo
+*** FIN  RUTINA ACEPTAR-CANCELAR
+if wop=1
+   if recloc()
+      delete
+      unlock all
+   else
+      store "OPERACION CANCELADA, REINTENTE" to wtext
+      do aviso with wtext
+   endif
+endif
+RELEASE WIND WELIGRU
+RETURN
+***
+PROCEDURE BRBUS
+DEFI WIND WBUSGRU FROM LIBRGRU+5,CIBRGRU+10 TO LIBRGRU+12,CIBRGRU+55;
+                  TITLE " BUSCAR ACTIVIDAD " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WBUSGRU
+DO WHILE .T.
+   SCAT MEMV BLANK
+   @ 00,01 SAY "ACTIVIDAD  :"
+   @ 01,01 SAY "DESCRIPCION:"
+   @ 00,14 GET M.CODGRU
+   READ
+   IF LASTKEY()=27
+      EXIT
+   ENDIF
+   IF LEN(TRIM(M.CODGRU))=0
+      LOOP
+   ENDIF
+   SEEK M.CODGRU
+   IF FOUND()
+      EXIT
+   ELSE
+      STORE "NO REGISTRADO, VERIFIQUE" TO WTEXT
+      DO AVISO WITH WTEXT
+   ENDIF
+ENDDO
+RELEASE WIND WBUSGRU
+RETURN
+***
+

@@ -1,0 +1,166 @@
+SELECT SYSESP
+DEFI WIND BRESP FROM LIBRESP,CIBRESP TO LIBRESP+10,CIBRESP+40 ;
+                TITLE " ESPECIALIDADES " ;
+                FOOTER " F1=Inc,F2=Mod,F3=Eli,F4=Bus,F6=Lis,ESC=Sel ";
+                DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND BRESP
+ON KEY LABEL F1 DO BRINC
+ON KEY LABEL F2 DO BRMOD
+ON KEY LABEL F3 DO BRELI
+ON KEY LABEL F4 DO BRBUS
+ON KEY LABEL F6 DO SYS0105R
+BROWSE FIELDS ESPECI:H="ESPECIALIDAD", DESCRI:H="DESCRIPCION";
+              NOAPPEND NODELETE NOEDIT NOMENU NOOPTIMIZE REST SAVE IN WINDOW BRESP
+RELEASE WIND BRESP
+RETURN
+***********************
+***                 ***
+***RUTINAS DE BRESP ***
+***                 ***
+***********************
+PROCEDURE BRINC
+DEFI WIND WINCESP FROM LIBRESP+5,CIBRESP+10 TO LIBRESP+10,CIBRESP+75;
+                  TITLE " INCLUIR ESPECIALIDAD " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WINCESP
+DO WHILE .T.
+   SCAT MEMV BLANK
+   @ 00,00 CLEAR
+   @ 00,01 SAY "ESPECIALIDAD:"
+   @ 01,01 SAY "DESCRIPCION :"
+   @ 00,15 GET M.ESPECI
+   READ
+   IF LASTKEY()=27
+      EXIT
+   ENDIF
+   IF LEN(ALLTRIM(M.ESPECI))=0
+      LOOP
+   ENDIF
+   SEEK M.ESPECI
+   IF FOUND()
+      @ 01,15 SAY DESCRI
+      STORE "YA EXISTE, VERIFIQUE" TO WTEXT
+      DO AVISO WITH WTEXT
+      LOOP
+   ELSE
+      @ 01,15 GET M.DESCRI
+      READ
+      *** INICIO RUTINA DE ACEPTAR-CANCELAR
+      store 1 to wop
+      do while .t.
+         @ 03,22  get wop pict "@*H Aceptar;Cancelar" defa wop
+         read
+         if lastkey()=13
+            exit
+         endif
+      enddo
+      *** FIN  RUTINA ACEPTAR-CANCELAR
+      if wop=1
+         if filloc()
+            append blank
+            gath memvar
+            unlock all
+         else
+            store "OPERACION CANCELADA, REINTENTE" to wtext
+            do aviso with wtext
+         endif
+      endif
+   ENDIF
+ENDDO
+RELEASE WIND WINCESP
+RETURN
+***
+PROCEDURE BRMOD
+DEFI WIND WMODESP FROM LIBRESP+5,CIBRESP+10 TO LIBRESP+10,CIBRESP+75;
+                  TITLE " MODIFICAR ESPECIALIDAD " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WMODESP
+SCAT MEMVAR
+@ 00,01 SAY "ESPECIALIDAD:"
+@ 01,01 SAY "DESCRIPCION :"
+@ 00,15 SAY M.ESPECI
+@ 01,15 GET M.DESCRI
+READ
+*** INICIO RUTINA DE ACEPTAR-CANCELAR
+store 1 to wop
+do while .t.
+   @ 03,22  get wop pict "@*H Aceptar;Cancelar" defa wop
+   read
+   if lastkey()=13
+      exit
+   endif
+enddo
+*** FIN  RUTINA ACEPTAR-CANCELAR
+if wop=1
+   if recloc()
+      gath memvar
+      unlock all
+   else
+      store "OPERACION CANCELADA, REINTENTE" to wtext
+      do aviso with wtext
+   endif
+endif
+RELEASE WIND WMODESP
+RETURN
+***
+PROCEDURE BRELI
+DEFI WIND WELIESP FROM LIBRESP+5,CIBRESP+10 TO LIBRESP+10,CIBRESP+75;
+                  TITLE " ELIMINAR ESPECIALIDAD " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WELIESP
+SCAT MEMVAR
+@ 00,01 SAY "ESPECIALIDAD:"
+@ 01,01 SAY "DESCRIPCION :"
+@ 00,15 SAY M.ESPECI
+@ 01,15 SAY M.DESCRI
+*** INICIO RUTINA DE ACEPTAR-CANCELAR
+store 2 to wop
+do while .t.
+   @ 03,22  get wop pict "@*H Aceptar;Cancelar" defa wop
+   read
+   if lastkey()=13
+      exit
+   endif
+enddo
+*** FIN  RUTINA ACEPTAR-CANCELAR
+if wop=1
+   if recloc()
+      delete
+      unlock all
+   else
+      store "OPERACION CANCELADA, REINTENTE" to wtext
+      do aviso with wtext
+   endif
+endif
+RELEASE WIND WELIESP
+RETURN
+***
+PROCEDURE BRBUS
+DEFI WIND WBUSESP FROM LIBRESP+5,CIBRESP+10 TO LIBRESP+10,CIBRESP+75;
+                  TITLE " BUSCAR ESPECIALIDAD " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WBUSESP
+DO WHILE .T.
+   SCAT MEMV BLANK
+   @ 00,01 SAY "ESPECIALIDAD:"
+   @ 01,01 SAY "DESCRIPCION :"
+   @ 00,15 GET M.ESPECI
+   READ
+   IF LASTKEY()=27
+      EXIT
+   ENDIF
+   IF LEN(ALLTRIM(M.ESPECI))=0
+      LOOP
+   ENDIF
+   SEEK M.ESPECI
+   IF FOUND()
+      EXIT
+   ELSE
+      STORE "NO REGISTRADO, VERIFIQUE" TO WTEXT
+      DO AVISO WITH WTEXT
+   ENDIF
+ENDDO
+RELEASE WIND WBUSESP
+RETURN
+***
+PROCEDURE BRORD
+* SET ORDER TO ??
+RETURN
+
+

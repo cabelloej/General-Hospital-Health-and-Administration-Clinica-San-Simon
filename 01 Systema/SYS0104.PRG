@@ -1,0 +1,167 @@
+SELECT SYSCON
+DEFI WIND BRCON FROM LIBRCON,CIBRCON TO LIBRCON+10,CIBRCON+60 ;
+                TITLE " CONSULTORIOS " ;
+                FOOTER " F1=Inc,F2=Mod,F3=Eli,F4=Bus,ESC=Sel ";
+                DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND BRCON
+ON KEY LABEL F1 DO BRINC
+ON KEY LABEL F2 DO BRMOD
+ON KEY LABEL F3 DO BRELI
+ON KEY LABEL F4 DO BRBUS
+BROWSE FIELDS CONSUL:H="CONSULTORIO", DESCRI:H="DESCRIPCION";
+              NOAPPEND NODELETE NOEDIT NOMENU NOOPTIMIZE REST SAVE IN WINDOW BRCON
+RELEASE WIND BRCON
+RETURN
+***********************
+***                 ***
+***RUTINAS DE BRCON ***
+***                 ***
+***********************
+PROCEDURE BRINC
+DEFI WIND WINCCON FROM LIBRCON+5,CIBRCON+10 TO LIBRCON+10,CIBRCON+75;
+                  TITLE " INCLUIR CONSULTORIO" DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WINCCON
+DO WHILE .T.
+   SCAT MEMV BLANK
+   @ 00,00 CLEAR
+   @ 00,01 SAY "CONSULTORIO:"
+   @ 01,01 SAY "DESCRIPCION:"
+   @ 00,14 GET M.CONSUL
+   READ
+   IF LASTKEY()=27
+      EXIT
+   ENDIF
+   STORE M.CONSUL TO WCLAVECON
+   IF LEN(TRIM(WCLAVECON))=0
+      LOOP
+   ENDIF
+   SEEK WCLAVECON
+   IF FOUND()
+      @ 01,14 SAY DESCRI
+      STORE "YA EXISTE, VERIFIQUE" TO WTEXT
+      DO AVISO WITH WTEXT
+      LOOP
+   ELSE
+      @ 01,14 GET M.DESCRI
+      READ
+      *** INICIO RUTINA DE ACEPTAR-CANCELAR
+      store 1 to wop
+      do while .t.
+         @ 03,22  get wop pict "@*H Aceptar;Cancelar" defa wop
+         read
+         if lastkey()=13
+            exit
+         endif
+      enddo
+      *** FIN  RUTINA ACEPTAR-CANCELAR
+      if wop=1
+         if filloc()
+            append blank
+            gath memvar
+            unlock all
+         else
+            store "OPERACION CANCELADA, REINTENTE" to wtext
+            do aviso with wtext
+         endif
+      endif
+   ENDIF
+ENDDO
+RELEASE WIND WINCCON
+RETURN
+***
+PROCEDURE BRMOD
+DEFI WIND WMODCON FROM LIBRCON+5,CIBRCON+10 TO LIBRCON+10,CIBRCON+75;
+                  TITLE " MODIFICAR CONSULTORIO " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WMODCON
+SCAT MEMVAR
+@ 00,01 SAY "CONSULTORIO:"
+@ 01,01 SAY "DESCRIPCION:"
+@ 00,14 SAY M.CONSUL
+@ 01,14 GET M.DESCRI
+READ
+*** INICIO RUTINA DE ACEPTAR-CANCELAR
+store 1 to wop
+do while .t.
+   @ 03,22  get wop pict "@*H Aceptar;Cancelar" defa wop
+   read
+   if lastkey()=13
+      exit
+   endif
+enddo
+*** FIN  RUTINA ACEPTAR-CANCELAR
+if wop=1
+   if recloc()
+      gath memvar
+      unlock all
+   else
+      store "OPERACION CANCELADA, REINTENTE" to wtext
+      do aviso with wtext
+   endif
+endif
+RELEASE WIND WMODCON
+RETURN
+***
+PROCEDURE BRELI
+DEFI WIND WELICON FROM LIBRCON+5,CIBRCON+10 TO LIBRCON+10,CIBRCON+75;
+                  TITLE " ELIMINAR CONSULTORIO " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WELICON
+SCAT MEMVAR
+@ 00,01 SAY "CONSULTORIO:"
+@ 01,01 SAY "DESCRIPCION:"
+@ 00,14 SAY M.CONSUL
+@ 01,14 SAY M.DESCRI
+*** INICIO RUTINA DE ACEPTAR-CANCELAR
+store 2 to wop
+do while .t.
+   @ 03,22  get wop pict "@*H Aceptar;Cancelar" defa wop
+   read
+   if lastkey()=13
+      exit
+   endif
+enddo
+*** FIN  RUTINA ACEPTAR-CANCELAR
+if wop=1
+   if recloc()
+      delete
+      unlock all
+   else
+      store "OPERACION CANCELADA, REINTENTE" to wtext
+      do aviso with wtext
+   endif
+endif
+RELEASE WIND WELICON
+RETURN
+***
+PROCEDURE BRBUS
+DEFI WIND WBUSCON FROM LIBRCON+5,CIBRCON+10 TO LIBRCON+10,CIBRCON+75;
+                  TITLE " BUSCAR CONSULTORIO " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WBUSCON
+DO WHILE .T.
+   SCAT MEMV BLANK
+   @ 00,01 SAY "CONSULTORIO:"
+   @ 01,01 SAY "DESCRIPCION:"
+   @ 00,14 GET M.CONSUL
+   READ
+   IF LASTKEY()=27
+      EXIT
+   ENDIF
+   STORE M.CONSUL   TO WCLAVECON
+   IF LEN(TRIM(WCLAVECON))=0
+      LOOP
+   ENDIF
+   SEEK WCLAVECON
+   IF FOUND()
+      EXIT
+   ELSE
+      STORE "NO REGISTRADO, VERIFIQUE" TO WTEXT
+      DO AVISO WITH WTEXT
+   ENDIF
+ENDDO
+RELEASE WIND WBUSCON
+RETURN
+***
+PROCEDURE BRORD
+* SET ORDER TO ??
+RETURN
+
+

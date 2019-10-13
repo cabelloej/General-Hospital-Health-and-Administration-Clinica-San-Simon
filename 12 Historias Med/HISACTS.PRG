@@ -1,0 +1,238 @@
+IF WACCESO<>"A"
+   RETURN
+ENDIF
+SELECT 20
+USE
+*** FIN CONTROL DE ACCESO
+DO WHILE .T.
+   ON KEY LABEL F1
+   ON KEY LABEL F2
+   ON KEY LABEL F3
+   ON KEY LABEL F4
+   ***
+   STORE 5  TO LIBRGRU
+   STORE 5  TO CIBRGRU
+   DO HISWINGR
+
+   ***
+   STORE 6  TO LIBRSUB
+   STORE 5  TO CIBRSUB
+   SELECT HISSUB
+   ON KEY LABEL F1 DO BRINC
+   ON KEY LABEL F2 DO BRMOD
+   ON KEY LABEL F3 DO BRELI
+   ON KEY LABEL F4 DO BRBUS
+   DEFI WIND BRSUB FROM LIBRSUB,CIBRSUB TO LIBRSUB+10,CIBRSUB+55 ;
+                   TITLE " ACTIVIDAD "+RTRIM(HISGRU.DESGRU);
+                   FOOTER " F1=Inc,F2=Mod,F3=Eli,F4=Bus,ESC=Sel ";
+                   DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+   ACTI WIND BRSUB
+   BROWSE FIELDS CODSUB:H="SUBACTIVIDAD", DESSUB:H="DESCRIPCION",ESTSUB:H="ESTRUCTURA";
+                 FOR CODGRU=HISGRU.CODGRU;
+                 NOAPPEND NODELETE NOEDIT NOMENU NOOPTIMIZE REST SAVE IN WINDOW BRSUB
+
+   *** INICIO RUTINA DE ACEPTAR-CANCELAR
+   store 1 to wop
+   do while .t.
+      @ 4,15 get wop pict "@*H Continuar;Abandonar" defa wop
+      read
+      if lastkey()=13
+         exit
+      endif
+   enddo
+   IF WOP=2
+      EXIT
+   ENDIF
+   *** FIN  RUTINA ACEPTAR-CANCELAR
+ENDDO
+RELEASE WIND BRGRU
+RELEASE WIND BRSUB
+ON KEY LABEL F1
+ON KEY LABEL F2
+ON KEY LABEL F3
+ON KEY LABEL F4
+RETURN
+***********************
+***                 ***
+***RUTINAS DE BRSUB ***
+***                 ***
+***********************
+PROCEDURE BRINC
+DEFI WIND WINCSUB FROM LIBRSUB+1,CIBRSUB TO LIBRSUB+15,CIBRSUB+79;
+                  TITLE " INCLUIR SUBACTIVIDAD " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WINCSUB
+DO WHILE .T.
+   SCAT MEMV BLANK
+   STORE HISGRU.CODGRU TO M.CODGRU
+   @ 00,00 CLEAR
+   @ 00,01 SAY "SUBACTIVID. :"
+   @ 02,01 SAY "ESTRUCTURA  :"
+   @ 03,01 SAY "LINEAS      :"
+   @ 04,01 SAY "COLUMNAS    :"
+   @ 05,01 SAY "TIPO DE DATO:"
+   @ 06,01 SAY "VALIDO DESDE:"
+   @ 07,01 SAY "VALIDO HASTA:"
+   @ 08,01 SAY "UNIDAD      :"
+   @ 09,01 SAY "VALOR NORMAL:"
+   @ 00,14 GET M.CODSUB
+   READ
+   IF LASTKEY()=27
+      EXIT
+   ENDIF
+   STORE M.CODGRU+M.CODSUB TO WCLAVE
+   IF LEN(TRIM(WCLAVE))=0
+      LOOP
+   ENDIF
+   SEEK WCLAVE
+   IF FOUND()
+      @ 00,18 SAY DESSUB
+      STORE "YA EXISTE, VERIFIQUE" TO WTEXT
+      DO AVISO WITH WTEXT
+      LOOP
+   ELSE
+      @ 00,18 GET M.DESSUB
+      @ 02,14 GET M.ESTSUB
+      @ 03,14 GET M.LONSUB pict "99"
+      @ 04,14 GET M.ANCSUB pict "99"
+      @ 05,14 GET M.TIPVAL
+      @ 06,14 GET M.VL1SUB
+      @ 07,14 GET M.VL2SUB
+      @ 08,14 GET M.UNDSUB
+      @ 09,14 GET M.VALNOR
+      READ
+      *** INICIO RUTINA DE ACEPTAR-CANCELAR
+      store 1 to wop
+      do while .t.
+         @ 11,18  get wop pict "@*H Aceptar;Cancelar" defa wop
+         read
+         if lastkey()=13
+            exit
+         endif
+      enddo
+      *** FIN  RUTINA ACEPTAR-CANCELAR
+      if wop=1
+         if filloc()
+            append blank
+            gath memvar
+            unlock all
+         else
+            store "OPERACION CANCELADA, REINTENTE" to wtext
+            do aviso with wtext
+         endif
+      endif
+   ENDIF
+ENDDO
+RELEASE WIND WINCSUB
+RETURN
+********************
+PROCEDURE BRMOD
+DEFI WIND WMODSUB FROM LIBRSUB+1,CIBRSUB TO LIBRSUB+15,CIBRSUB+79;
+                  TITLE " MODIFICAR SUBACTIVIDAD " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WMODSUB
+SCAT MEMV
+@ 00,00 CLEAR
+@ 00,01 SAY "SUBACTIVID. :"
+@ 02,01 SAY "ESTRUCTURA  :"
+@ 03,01 SAY "LINEAS      :"
+@ 04,01 SAY "COLUMNAS    :"
+@ 05,01 SAY "TIPO DE DATO:"
+@ 06,01 SAY "VALIDO DESDE:"
+@ 07,01 SAY "VALIDO HASTA:"
+@ 08,01 SAY "UNIDAD      :"
+@ 09,01 SAY "VALOR NORMAL:"
+@ 00,14 SAY M.CODSUB
+@ 00,18 GET M.DESSUB
+@ 02,14 GET M.ESTSUB
+@ 03,14 GET M.LONSUB pict "99"
+@ 04,14 GET M.ANCSUB pict "99"
+@ 05,14 GET M.TIPVAL
+@ 06,14 GET M.VL1SUB
+@ 07,14 GET M.VL2SUB
+@ 08,14 GET M.UNDSUB
+@ 09,14 GET M.VALNOR
+READ
+*** INICIO RUTINA DE ACEPTAR-CANCELAR
+store 1 to wop
+do while .t.
+   @ 11,18  get wop pict "@*H Aceptar;Cancelar" defa wop
+   read
+   if lastkey()=13
+      exit
+   endif
+enddo
+*** FIN  RUTINA ACEPTAR-CANCELAR
+if wop=1
+   if recloc()
+      gath memvar
+      unlock all
+   else
+      store "OPERACION CANCELADA, REINTENTE" to wtext
+      do aviso with wtext
+   endif
+endif
+RELEASE WIND WMODSUB
+RETURN
+********************
+PROCEDURE BRELI
+DEFI WIND WELISUB FROM LIBRSUB+1,CIBRSUB TO LIBRSUB+5,CIBRSUB+60;
+                  TITLE " ELIMINAR SUBACTIVIDAD " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WELISUB
+SCAT MEMV
+@ 00,00 CLEAR
+@ 00,01 SAY "SUBACTIVID.:"
+@ 00,14 SAY M.CODSUB
+@ 00,20 SAY M.DESSUB
+*** INICIO RUTINA DE ACEPTAR-CANCELAR
+store 1 to wop
+do while .t.
+   @ 02,18  get wop pict "@*H Aceptar;Cancelar" defa wop
+   read
+   if lastkey()=13
+      exit
+   endif
+enddo
+*** FIN  RUTINA ACEPTAR-CANCELAR
+if wop=1
+   if filloc()
+      delete
+      unlock all
+   else
+      store "OPERACION CANCELADA, REINTENTE" to wtext
+      do aviso with wtext
+   endif
+endif
+RELEASE WIND WELISUB
+RETURN
+***************
+PROCEDURE BRBUS
+DEFI WIND WBUSSUB FROM LIBRSUB+1,CIBRSUB TO LIBRSUB+8,CIBRSUB+60;
+                  TITLE " BUSCAR SUBACTIVIDAD " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WBUSSUB
+SCAT MEMV BLANK
+STORE HISGRU.CODGRU TO M.CODGRU
+@ 00,00 CLEAR
+@ 00,01 SAY "SUBACTIVID.:"
+@ 02,01 SAY "ESTRUCTURA :"
+@ 00,14 GET M.CODSUB
+READ
+IF LASTKEY()=27
+   RELEASE WIND WBUSSUB
+   RETURN
+ENDIF
+STORE M.CODGRU+M.CODSUB TO WCLAVE
+IF LEN(TRIM(WCLAVE))=0
+   RELEASE WIND WBUSSUB
+   RETURN
+ENDIF
+SEEK WCLAVE
+IF FOUND()
+   RELEASE WIND WBUSSUB
+   RETURN
+ELSE
+   store "NO REGISTRADO, VERIFIQUE" to wtext
+   do aviso with wtext
+ENDIF
+RELEASE WIND WBUSSUB
+RETURN
+********************
+

@@ -1,0 +1,180 @@
+SELECT AFIPLANG
+SET RELA TO PLAN INTO AFIPLAND
+DEFI WIND BRPLANG FROM LIBRPLA,CIBRPLA TO LIBRPLA+10,CIBRPLA+33 ;
+                  TITLE " PLANES DE AFILIACION " ;
+                  FOOTER " F1=Inc,F2=Mod,F3=Eli,F4=Bus,ESC=Sel ";
+                  DOUBLE NOZOOM NOGROW COLOR SCHEME 10
+DEFI WIND BRPLAND FROM LIBRPLA,CIBRPLA+34 TO LIBRPLA+16,CIBRPLA+79;
+                  TITLE " DETALLE DEL PLAN " ;
+                  FOOTER " F1=Inc,F2=Mod,F3=Eli,F4=Bus,ESC=Sel ";
+                  DOUBLE NOZOOM NOGROW COLOR SCHEME 10
+ACTI WIND BRPLANG
+ON KEY LABEL F1 DO BRINC
+ON KEY LABEL F2 DO BRMOD
+ON KEY LABEL F3 DO BRELI
+ON KEY LABEL F4 DO BRBUS
+BROWSE FIELDS PLAN:H="PLAN", DESCRI:H="DESCRIPCION";
+              NOAPPEND NODELETE NOEDIT NOMENU NOOPTIMIZE NOCLEAR;
+              REST SAVE IN WINDOW BRPLANG WHEN SERVI()
+ON KEY LABEL F1
+ON KEY LABEL F2
+ON KEY LABEL F3
+ON KEY LABEL F4
+RELEASE WIND BRPLANG
+RELEASE WIND BRPLAND
+RETURN
+*************************
+*** RUTINAS DE BRPLANG***
+*************************
+PROCEDURE BRINC
+DEFI WIND WINCPG FROM LIBRPLA+3,CIBRPLA TO LIBRPLA+06,CIBRPLA+33;
+                 TITLE " INCLUIR PLAN " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+DO WHILE .T.
+   ACTI WIND WINCPG
+   SCAT MEMV BLANK
+   @ 00,00 CLEAR
+   @ 00,01 GET M.PLAN
+   READ
+   IF LASTKEY()=27
+      EXIT
+   ENDIF
+   STORE M.PLAN TO WCLAVEPLA
+   IF LEN(TRIM(WCLAVEPLA))=0
+      LOOP
+   ENDIF
+   SEEK WCLAVEPLA
+   IF FOUND()
+      @ 00,06 SAY DESCRI
+      STORE "YA EXISTE, VERIFIQUE" TO WTEXT
+      DO AVISO WITH WTEXT
+      LOOP
+   ELSE
+      @ 00,06 GET M.DESCRI
+      READ
+      *** INICIO RUTINA DE ACEPTAR-CANCELAR
+      store 1 to wop
+      do while .t.
+         @ 01,9  get wop pict "@*H Aceptar;Cancelar" defa wop
+         read
+         if lastkey()=13
+            exit
+         endif
+      enddo
+      *** FIN  RUTINA ACEPTAR-CANCELAR
+      if wop=1
+         if filloc()
+            append blank
+            gath memvar
+            unlock all
+         endif
+         do afi0102b
+         select afiplang
+      endif
+   ENDIF
+ENDDO
+RELEASE WIND WINCPG
+RETURN
+**********************
+PROCEDURE BRMOD
+IF EOF()
+   RETURN
+ENDIF
+DEFI WIND WMODPG FROM LIBRPLA+3,CIBRPLA TO LIBRPLA+06,CIBRPLA+33;
+                 TITLE " MODIFICAR PLAN " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WMODPG
+SCAT MEMVAR
+@ 00,01 SAY M.PLAN
+@ 00,06 GET M.DESCRI
+READ
+*** INICIO RUTINA DE ACEPTAR-CANCELAR
+store 1 to wop
+do while .t.
+   @ 01,09  get wop pict "@*H Aceptar;Cancelar" defa wop
+   read
+   if lastkey()=13
+      exit
+   endif
+enddo
+*** FIN  RUTINA ACEPTAR-CANCELAR
+if wop=1
+   if recloc()
+      gath memvar
+      unlock all
+   endif
+   do afi0102b
+   select afiplang
+endif
+RELEASE WIND WMODPG
+RETURN
+**********************
+PROCEDURE BRELI
+DEFI WIND WELISER FROM LIBRPLA+3,CIBRPLA TO LIBRPLA+06,CIBRPLA+33;
+                  TITLE " ELIMINAR PLAN " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WELISER
+SCAT MEMVAR
+@ 00,01 SAY M.PLAN
+@ 00,06 SAY M.DESCRI
+*** INICIO RUTINA DE ACEPTAR-CANCELAR
+store 1 to wop
+do while .t.
+   @ 01,09  get wop pict "@*H Aceptar;Cancelar" defa wop
+   read
+   if lastkey()=13
+      exit
+   endif
+enddo
+*** FIN  RUTINA ACEPTAR-CANCELAR
+if wop=1
+   if recloc()
+      delete
+      select afipland
+      if filloc()
+         delete all for plan = afiplang.plan
+         unlock all
+         select afiplang
+      endif
+      unlock all
+   endif
+endif
+RELEASE WIND WELISER
+RETURN
+**********************
+PROCEDURE BRBUS
+DEFI WIND WBUSSER FROM LIBRPLA+3,CIBRPLA TO LIBRPLA+06,CIBRPLA+33;
+                  TITLE " BUSCAR PLAN " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WBUSSER
+DO WHILE .T.
+   SCAT MEMV BLANK
+   @ 00,01 GET M.PLAN
+   READ
+   IF LASTKEY()=27
+      EXIT
+   ENDIF
+   STORE M.PLAN TO WCLAVEPLA
+   IF LEN(TRIM(WCLAVEPLA))=0
+      LOOP
+   ENDIF
+   SEEK WCLAVEPLA
+   IF FOUND()
+      EXIT
+   ELSE
+      STORE "NO REGISTRADO, VERIFIQUE" TO WTEXT
+      DO AVISO WITH WTEXT
+   ENDIF
+ENDDO
+RELEASE WIND WBUSSER
+RETURN
+**********************
+FUNCTION SERVI
+SELECT AFIPLAND
+ACTI WIND BRPLAND
+BROWSE FIELDS WSERV=FUNSER():H="AREA",CANTIDAD:H="    N§",DESCUENTO:H="    %",COBERTURA:H="         Bs.";
+       NOAPPEND NODELETE NOEDIT NOCLEAR NOMENU NOWAIT NOOPTIMIZE REST IN WINDOW BRPLAND
+ACTI WIND BRPLANG
+RETURN
+***********
+FUNC FUNSER
+***********
+STORE SUBSTR(SYSPTO.DESCRI,1,15) TO WSERV
+RETURN  WSERV
+

@@ -1,0 +1,572 @@
+SELECT HISGEN
+STORE 4 TO LIBRHG
+STORE 1 TO CIBRHG
+IF WFLAGHIST = "H"
+   STORE " HISTORIA MEDICA  PCTE:"+RTRIM(WNOMBRE)+" Codigo :"+WXCODPAC TO WTITLE
+ELSE
+   IF WFLAGHIST = "C"
+      STORE " CONSULTA EXTERNA PCTE:"+RTRIM(WNOMBRE)+" Codigo :"+WXCODPAC TO WTITLE
+   ELSE
+      IF WFLAGHIST = "L"
+         STORE " LABORATORIO PCTE:"+RTRIM(WNOMBRE)+" Codigo :"+WXCODPAC TO WTITLE
+      ELSE
+         IF WFLAGHIST = "I"
+            STORE " INGRESO HOSPITALARIO PCTE:"+RTRIM(WNOMBRE)+" Codigo :"+WXCODPAC TO WTITLE
+         ELSE
+            STORE " ??????????? PCTE:"+RTRIM(WNOMBRE)+" Codigo :"+WXCODPAC TO WTITLE
+         ENDIF
+      ENDIF
+   ENDIF
+ENDIF
+DEFI WIND BRHG  FROM LIBRHG,CIBRHG TO LIBRHG+12,CIBRHG+70;
+                TITLE WTITLE;
+                FOOTER " F1=Inc, F2=Mod, F3=Eli, F4=Bus, F6=Cons, ESC=Salir";
+                DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND BRHG
+ON KEY LABEL F1 DO BRINC
+ON KEY LABEL F2 DO BRMOD
+ON KEY LABEL F3 DO BRELI
+ON KEY LABEL F4 DO BRBUS
+ON KEY LABEL F6 DO BRCON
+SEEK WCODPAC
+BROWSE FIELDS NUMHIS:H="HISTORIA",FECACT:H="FECHA  ", FUNACT=FUNACT():H="ACTIVIDAD",;
+              FUNESP=FUNESP():H="ESPECIALIDAD", FUNMED=FUNMED():H="MEDICO";
+              NOAPPEND NODELETE NOEDIT NOMENU NOOPTIMIZE REST SAVE IN WINDOW BRHG;
+              KEY WCODPAC
+*BROWSE FIELDS FUNHIS=FUNHIS():H="HISTORIA",FUNFEC=FUNFEC():H="FECHA", FUNACT=FUNACT():H="ACTIVIDAD",;
+*              FUNESP=FUNESP():H="ESPECIALIDAD", FUNMED=FUNMED():H="MEDICO";
+*              NOAPPEND NODELETE NOEDIT NOMENU NOOPTIMIZE REST SAVE IN WINDOW BRHG;
+*              KEY WCODPAC
+ON KEY LABEL F1
+ON KEY LABEL F2
+ON KEY LABEL F3
+ON KEY LABEL F4
+ON KEY LABEL F5
+ON KEY LABEL F6
+RELE WIND BRHG
+RETURN
+**************************
+***    R U T I N A S   ***
+**************************
+***********
+FUNC FUNHIS
+***********
+SELECT HISGEN
+IF CODPAC<>WCODPAC
+   STORE "        " TO FUNHIS
+ELSE
+   STORE NUMHIS     TO FUNHIS
+ENDIF
+RETURN FUNHIS
+***********
+FUNC FUNFEC
+***********
+SELECT HISGEN
+IF CODPAC<>WCODPAC
+   STORE "        "   TO FUNFEC
+ELSE
+   STORE DTOC(FECACT) TO FUNFEC
+ENDIF
+RETURN FUNFEC
+***********
+FUNC FUNACT
+***********
+SELECT HISGEN
+IF CODPAC<>WCODPAC
+   STORE REPL(" ",25)  TO FUNACT
+ELSE
+   STORE HISGRU.DESGRU TO FUNACT
+ENDIF
+RETURN FUNACT
+***********
+FUNC FUNESP
+***********
+SELECT HISGEN
+IF CODPAC<>WCODPAC
+   STORE REPL(" ",25)  TO FUNESP
+ELSE
+   STORE SYSESP.DESCRI TO FUNESP
+ENDIF
+RETURN FUNESP
+***********
+FUNC FUNMED
+***********
+SELECT HISGEN
+IF CODPAC<>WCODPAC
+   STORE REPL(" ",25)  TO FUNMED
+ELSE
+   STORE SYSMED.NOMBRE TO FUNMED
+ENDIF
+RETURN FUNMED
+**********
+PROC BRINC
+**********
+IF .NOT.WFLAGMED.OR.WFLAGHIST<>"H"
+   ON KEY LABEL F1
+   ON KEY LABEL F2
+   ON KEY LABEL F3
+   ON KEY LABEL F4
+   ON KEY LABEL F6
+   DEFI WIND BRHGINC  FROM LIBRHG+1,CIBRHG+2 TO LIBRHG+8,CIBRHG+72;
+                      TITLE " INCLUIR " ;
+                      DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+   ACTI WIND BRHGINC
+   STORE .F. TO WFLAGING
+   STORE .F. TO WFLAGBRO
+
+   SELECT HISGEN
+   SCATT MEMVAR BLANK
+
+   STORE WCODPAC   TO M.CODPAC
+   STORE WNUMHIS   TO M.NUMHIS
+   STORE DATE()    TO M.FECACT
+   STORE WCODMED   TO M.CODDOC
+   STORE SPACE(14) TO WXCODPAC
+   DO ARMACOD
+   @ 01,05 SAY "PACIENTE : "
+   @ 02,05 SAY "FECHA    : "
+   @ 03,05 SAY "ACTIVIDAD: "
+   @ 04,05 SAY "DOCTOR   : "
+   @ 01,16 SAY WXCODPAC+" "+WNOMBRE
+   @ 02,16 GET M.FECACT
+   @ 03,16 GET M.CODACT    VALID VALACT()
+   IF WCODMED=SPACE(3).OR..NOT.WFLAGMED
+      @ 04,16 GET M.CODDOC VALID VALDOC()
+   ELSE
+      STORE WCODMED TO M.CODDOC
+      @ 04,16 SAY M.CODDOC
+   ENDIF
+   READ
+   *** INICIO RUTINA DE ACEPTAR-CANCELAR
+   store 1 to wop
+   do while .t.
+      @ 05,05  get wop pict "@*H Aceptar;Cancelar" defa wop
+      read
+      if lastkey()=13
+         exit
+      endif
+   enddo
+   *** FIN  RUTINA ACEPTAR-CANCELAR
+   SELECT HISGEN
+   if wop=1
+      do numact
+      if filloc()
+         append blank
+         gath memvar
+         replace codare with wuserubi
+         unlock all
+         store .t. to wflaging
+      else
+         store "OPERACION CANCELADA, REINTENTE" to wtext
+         do aviso with wtext
+      endif
+   endif
+   if wflaging
+      do hisacthd
+   endif
+   ON KEY LABEL F1 DO BRINC
+   ON KEY LABEL F2 DO BRMOD
+   ON KEY LABEL F3 DO BRELI
+   ON KEY LABEL F4 DO BRBUS
+   ON KEY LABEL F6 DO BRCON
+   RELE WIND BRHGINC
+ELSE
+   STORE "INGRESE ACTIVIDADES POR CONSULTA O POR INGRESO HOSPITALARIO" TO WTEXT
+   DO AVISO WITH WTEXT
+ENDIF
+SELECT HISGEN
+RETURN
+******
+**********
+PROC BRMOD
+**********
+IF CODDOC=WCODMED.OR..NOT.WFLAGMED
+   IF CODPAC<>WCODPAC
+      RETURN
+   ENDIF
+   ON KEY LABEL F1
+   ON KEY LABEL F2
+   ON KEY LABEL F3
+   ON KEY LABEL F4
+   ON KEY LABEL F6
+   DEFI WIND BRHGMOD  FROM LIBRHG+1,CIBRHG+2 TO LIBRHG+8,CIBRHG+72;
+                      TITLE " MODIFICAR " ;
+                      DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+   ACTI WIND BRHGMOD
+   STORE .F. TO WFLAGING
+   STORE .F. TO WFLAGBRO
+
+   SELECT HISGEN
+   SCATT MEMVAR
+   STORE SPACE(14) TO WXCODPAC
+   DO ARMACOD
+
+   @ 01,05 SAY "PACIENTE : "
+   @ 02,05 SAY "FECHA    : "
+   @ 03,05 SAY "ACTIVIDAD: "
+   @ 04,05 SAY "DOCTOR   : "
+   @ 01,16 SAY WXCODPAC+" "+WNOMBRE
+   @ 02,16 GET M.FECACT
+   * 03,16 GET M.CODACT VALID VALACT()
+   @ 03,16 SAY M.CODACT
+   IF WCODMED=SPACE(3)
+      @ 04,16 GET M.CODDOC VALID VALDOC()
+   ELSE
+      STORE WCODMED TO M.CODDOC
+      @ 04,16 SAY M.CODDOC
+   ENDIF
+   READ
+   *** INICIO RUTINA DE ACEPTAR-CANCELAR
+   store 1 to wop
+   do while .t.
+      @ 05,05  get wop pict "@*H Aceptar;Cancelar" defa wop
+      read
+      if lastkey()=13
+         exit
+      endif
+   enddo
+   *** FIN  RUTINA ACEPTAR-CANCELAR
+   SELECT HISGEN
+   if wop=1
+      if recloc()
+         gath memvar
+         replace codare with wuserubi
+         replace flagrp with .f.
+         unlock all
+         store .t. to wflaging
+      else
+         store "OPERACION CANCELADA, REINTENTE" to wtext
+         do aviso with wtext
+      endif
+   endif
+   if wflaging
+      do hisacthd
+   endif
+   ON KEY LABEL F1 DO BRINC
+   ON KEY LABEL F2 DO BRMOD
+   ON KEY LABEL F3 DO BRELI
+   ON KEY LABEL F4 DO BRBUS
+   ON KEY LABEL F6 DO BRCON
+   RELE WIND BRHGMOD
+ELSE
+   ON KEY LABEL F1
+   ON KEY LABEL F2
+   ON KEY LABEL F3
+   ON KEY LABEL F4
+   ON KEY LABEL F6
+   DEFI WIND BRHGMOD  FROM LIBRHG+1,CIBRHG+2 TO LIBRHG+8,CIBRHG+72;
+                      TITLE " CONSULTAR " ;
+                      DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+   ACTI WIND BRHGMOD
+   STORE .F. TO WFLAGING
+   STORE .F. TO WFLAGBRO
+
+   SELECT HISGEN
+   SCATT MEMVAR
+   STORE SPACE(14) TO WXCODPAC
+   DO ARMACOD
+
+    @ 01,05 SAY "PACIENTE : "
+    @ 02,05 SAY "FECHA    : "
+    @ 03,05 SAY "ACTIVIDAD: "
+    @ 04,05 SAY "DOCTOR   : "
+    @ 01,16 SAY WXCODPAC+" "+WNOMBRE
+    @ 02,16 SAY M.FECACT
+    @ 03,16 SAY M.CODACT
+    @ 03,16 SAY M.CODACT
+    @ 04,16 SAY M.CODDOC
+   *** INICIO RUTINA DE ACEPTAR-CANCELAR
+   store 1 to wop
+   do while .t.
+      @ 05,05  get wop pict "@*H Continuar;Cancelar" defa wop
+      read
+      if lastkey()=13
+         exit
+      endif
+   enddo
+   *** FIN  RUTINA ACEPTAR-CANCELAR
+   SELECT HISGEN
+   if wop=1
+      store .t. to wflaging
+   endif
+   if wflaging
+      do hisacthd
+   endif
+   ON KEY LABEL F1 DO BRINC
+   ON KEY LABEL F2 DO BRMOD
+   ON KEY LABEL F3 DO BRELI
+   ON KEY LABEL F4 DO BRBUS
+   ON KEY LABEL F6 DO BRCON
+   RELE WIND BRHGMOD
+ENDIF
+SELECT HISGEN
+RETURN
+******
+**********
+PROC BRELI
+**********
+IF CODDOC=WCODMED.OR..NOT.WFLAGMED
+   IF CODPAC<>WCODPAC
+      RETURN
+   ENDIF
+   ON KEY LABEL F1
+   ON KEY LABEL F2
+   ON KEY LABEL F3
+   ON KEY LABEL F4
+   ON KEY LABEL F6
+   DEFI WIND BRHGELI  FROM LIBRHG+1,CIBRHG+2 TO LIBRHG+8,CIBRHG+72;
+                      TITLE " ELIMINAR " ;
+                      DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+   ACTI WIND BRHGELI
+   SELECT HISGEN
+   SCATT MEMV
+   STORE SPACE(14) TO WXCODPAC
+   DO ARMACOD
+   @ 01,05 SAY "PACIENTE : "
+   @ 02,05 SAY "FECHA    : "
+   @ 03,05 SAY "ACTIVIDAD: "
+   @ 04,05 SAY "DOCTOR   : "
+   @ 01,16 SAY WXCODPAC+" "+WNOMBRE
+   @ 02,16 SAY M.FECACT
+   @ 03,16 SAY M.CODACT
+   @ 04,16 SAY M.CODDOC
+   *** INICIO RUTINA DE ACEPTAR-CANCELAR
+   store 2 to wop
+   do while .t.
+      @ 05,05  get wop pict "@*H Cancelar; Aceptar" defa wop
+      read
+      if lastkey()=13
+         exit
+      endif
+   enddo
+   *** FIN  RUTINA ACEPTAR-CANCELAR
+   SELECT HISGEN
+   if wop=2
+      if recloc()
+         delete
+         unlock all
+         select hisdet
+         if filloc()
+            do while .t.
+               seek m.codpac+m.codact+str(m.numact,4)
+               if found()
+                  delete
+               else
+                  exit
+               endif
+            enddo
+            unlock all
+         else
+            store "OPERACION CANCELADA, REINTENTE" to wtext
+            do aviso with wtext
+         endif
+      else
+         store "OPERACION CANCELADA, REINTENTE" to wtext
+         do aviso with wtext
+      endif
+   endif
+   ON KEY LABEL F1 DO BRINC
+   ON KEY LABEL F2 DO BRMOD
+   ON KEY LABEL F3 DO BRELI
+   ON KEY LABEL F4 DO BRBUS
+   ON KEY LABEL F6 DO BRCON
+   RELE WIND BRHGELI
+ELSE
+   STORE "NO PUEDE ELIMINAR ACTIVIDADES DE OTROS MEDICOS" TO WTEXT
+   DO AVISO WITH WTEXT
+ENDIF
+SELECT HISGEN
+RETURN
+******
+**********
+PROC BRBUS
+**********
+ON KEY LABEL F1
+ON KEY LABEL F2
+ON KEY LABEL F3
+ON KEY LABEL F4
+ON KEY LABEL F6
+DEFI WIND BRHGBUS  FROM LIBRHG+1,CIBRHG+2 TO LIBRHG+8,CIBRHG+72;
+                   TITLE " BUSCAR " ;
+                   DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND BRHGBUS
+SELECT HISGEN
+SCATT MEMV
+STORE SPACE(14) TO WXCODPAC
+DO ARMACOD
+@ 01,05 SAY "PACIENTE : "
+@ 02,05 SAY "FECHA    : "
+@ 01,16 SAY WXCODPAC+" "+WNOMBRE
+@ 02,16 GET M.FECACT
+READ
+store recno() to wstart
+store m.codpac+str(year(m.fecact),4)+str(month(m.fecact),2)+str(day(m.fecact),2) to wclave
+seek wclave
+if .not. found()
+   store "NO EXISTE, VERIFIQUE :"+wclave TO WTEXT
+   do aviso with wtext
+   go wstart
+endif
+ON KEY LABEL F1 DO BRINC
+ON KEY LABEL F2 DO BRMOD
+ON KEY LABEL F3 DO BRELI
+ON KEY LABEL F4 DO BRBUS
+ON KEY LABEL F6 DO BRCON
+RELE WIND BRHGBUS
+SELECT HISGEN
+RETURN
+**********
+PROC BRCON
+**********
+   PUSH KEY CLEAR
+   DEFI WIND WINDVER FROM 12,19 TO 14,59;
+             TITLE " SALIDA ";
+             DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+   ACTIVATE WIND WINDVER
+   DO WHILE .T.
+      STORE 1 TO WOP
+      @ 00,03 SAY "OPCIONES: ";
+      GET WOP PICT "@*H MONITOR  ;IMPRESORA "
+      READ
+      IF LASTKEY()=13
+         EXIT
+      ENDIF
+   ENDDO
+   RELE WIND WINDVER
+   STORE WOP                       TO WSALIDA
+   ***
+   STORE .F.                       TO WFLAGREP
+   IF WUSERUBI="LAB"
+      STORE 2                      TO WFORMATO
+      *KEYB CHR(13)
+   ELSE
+      STORE 1                      TO WFORMATO
+   ENDIF
+   STORE "T"                       TO WTIPPAC
+   STORE "T"                       TO WSEXO
+   STORE CTOD("  -  -  ")          TO WNAC1
+   STORE CTOD("  -  -  ")          TO WNAC2
+   STORE CTOD("  -  -  ")          TO WNACDESDE
+   STORE CTOD("  -  -  ")          TO WNACHASTA
+   STORE CTOD("  -  -  ")          TO WDESDE
+   STORE DATE()                    TO WHASTA
+   STORE SPACE(3)                  TO WCODDOC
+   STORE HISGEN.CODACT             TO WGRUPO
+   *STORE SPACE(2)                 TO WGRUPO
+   STORE HISGEN.NUMACT             TO WNUMACT
+   *STORE 0                        TO WNUMACT
+   STORE SPACE(3)                  TO WCODSUB
+   STORE SPACE(3)                  TO WCODREN
+   STORE SPACE(3)                  TO WCODTAB
+   STORE SPACE(40)                 TO WVALDAT
+
+   STORE SPACE(20)                 TO WTIPDES
+   STORE SPACE(20)                 TO WSEXDES
+   STORE SPACE(20)                 TO WDESDES
+   STORE SPACE(20)                 TO WDESHAS
+   STORE SPACE(20)                 TO WDESDOC
+   STORE SPACE(20)                 TO WDESGRU
+   STORE SPACE(20)                 TO WDESSUB
+   STORE SPACE(20)                 TO WDESREN
+   STORE SPACE(20)                 TO WDESTAB
+   DEFI WIND WINCON FROM 0,0 TO 26,81 NONE
+   ACTI WIND WINCON
+   DO HISIMPHD
+   RELE WIND WINCON
+   POP KEY
+   RETURN
+   SELECT HISGEN
+RETURN
+***********
+FUNC VALACT
+***********
+SELECT HISGRU
+DO WHILE .T.
+   SEEK M.CODACT
+   IF FOUND()
+      @ 03,20 SAY DESGRU
+      RETURN .T.
+   ELSE
+      STORE 10 TO LIBRGRU
+      STORE 10 TO CIBRGRU
+      DO HISWINGR
+      RELE WIND BRGRU
+      STORE CODGRU TO M.CODACT
+   ENDIF
+ENDDO
+***********
+PROC NUMACT
+***********
+*IF WFLAGHIST
+*   STORE 0 TO WCONTACT
+*   SELECT HISGEN
+*   SEEK WCODPAC
+*   DO WHILE .NOT. EOF() .AND. CODPAC = WCODPAC
+*      IF CODACT=M.CODACT
+*         STORE WCONTACT+1 TO WCONTACT
+*      ENDIF
+*      SKIP
+*   ENDDO
+*   STORE WCONTACT+1 TO M.NUMACT
+*   RETURN .T.
+*ELSE
+*   STORE 0 TO WCONTACT
+*   SELECT 25
+*   USE HISGEN.DBF
+*   COPY STRU TO &WTMPHG
+*   USE &WTMPHG
+*   APPEND FROM HISGEN.DBF FOR CODPAC=WCODPAC
+*   DO WHILE .NOT. EOF() .AND. CODPAC = WCODPAC
+*      IF CODACT=M.CODACT
+*         STORE WCONTACT+1 TO WCONTACT
+*      ENDIF
+*      SKIP
+*   ENDDO
+*   STORE WCONTACT+1 TO M.NUMACT
+*   SELECT 25
+*   USE
+*   RETURN .T.
+*ENDIF
+IF WTIPPAC="A"
+   SELECT AFIAFI
+   IF RECLOC()
+      REPLACE SERACT WITH SERACT+1
+      UNLOCK ALL
+   ELSE
+      RETURN .F.
+   ENDIF
+ELSE
+   SELECT SYSPAC
+   IF RECLOC()
+      REPLACE SERACT WITH SERACT+1
+      UNLOCK ALL
+   ELSE
+      RETURN .F.
+   ENDIF
+ENDIF
+STORE SERACT TO M.NUMACT
+SELECT HISGEN
+RETURN .T.
+*********************
+
+***********
+FUNC VALDOC
+***********
+SELECT SYSMED
+DO WHILE .T.
+   SEEK M.CODDOC
+   IF FOUND()
+      @ 04,20 SAY NOMBRE
+      RETURN .T.
+   ELSE
+      STORE 11 TO LIBRMED
+      STORE 10 TO CIBRMED
+      DO HISWINMD
+      RELE WIND BRMED
+      STORE MEDICO TO M.CODDOC
+   ENDIF
+ENDDO
+SELECT HISGEN
+RETURN .T.
+
+

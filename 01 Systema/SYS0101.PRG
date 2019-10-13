@@ -1,0 +1,172 @@
+SELECT SYSPTO
+DEFI WIND BRPTO FROM LIBRPTO,CIBRPTO TO LIBRPTO+10,CIBRPTO+30 ;
+                TITLE " AREAS DE SERVICIO " ;
+                FOOTER "F1=In,F2=Mo,F3=El,F4=Bu,F6=Li,ESC=Sel";
+                DOUBLE FLOAT ZOOM GROW SHADOW COLOR SCHEME 10
+                *DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10   
+ACTI WIND BRPTO
+ON KEY LABEL F1 DO BRINC
+ON KEY LABEL F2 DO BRMOD
+ON KEY LABEL F3 DO BRELI
+ON KEY LABEL F4 DO BRBUS
+ON KEY LABEL F6 DO SYS0101R
+BROWSE FIELDS CODPTO:H="AREA", DESCRI:H="DESCRIPCION",FIJO:H="FIJA?";
+              NOAPPEND NODELETE NOEDIT NOMENU NOOPTIMIZE REST SAVE IN WINDOW BRPTO
+RELEASE WIND BRPTO
+RETURN
+***********************
+***                 ***
+***RUTINAS DE BRPTO ***
+***                 ***
+***********************
+PROCEDURE BRINC
+DEFI WIND WINCPTO FROM LIBRPTO+5,CIBRPTO+10 TO LIBRPTO+10,CIBRPTO+75;
+                  TITLE " INCLUIR AREA " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WINCPTO
+DO WHILE .T.
+   SCAT MEMV BLANK
+   @ 00,00 CLEAR
+   @ 00,01 SAY "AREA       :"
+   @ 01,01 SAY "DESCRIPCION:"
+   @ 02,01 SAY "FIJA? (S/N):"
+   @ 00,14 GET M.CODPTO
+   READ
+   IF LASTKEY()=27
+      EXIT
+   ENDIF
+   STORE M.CODPTO TO WCLAVEPTO
+   IF LEN(TRIM(WCLAVEPTO))=0
+      LOOP
+   ENDIF
+   SEEK WCLAVEPTO
+   IF FOUND()
+      @ 01,14 SAY DESCRI
+      STORE "YA EXISTE, VERIFIQUE" TO WTEXT
+      DO AVISO WITH WTEXT
+      LOOP
+   ELSE
+      @ 01,14 GET M.DESCRI
+      @ 02,14 GET M.FIJO
+      READ
+      *** INICIO RUTINA DE ACEPTAR-CANCELAR
+      store 1 to wop
+      do while .t.
+         @ 03,22  get wop pict "@*H Aceptar;Cancelar" defa wop
+         read
+         if lastkey()=13
+            exit
+         endif
+      enddo
+      *** FIN  RUTINA ACEPTAR-CANCELAR
+      if wop=1
+         if filloc()
+            append blank
+            gath memvar
+            unlock all
+         else
+            store "OPERACION CANCELADA, REINTENTE" to wtext
+            do aviso with wtext
+         endif
+      endif
+   ENDIF
+ENDDO
+RELEASE WIND WINCPTO
+RETURN
+***
+PROCEDURE BRMOD
+DEFI WIND WMODPTO FROM LIBRPTO+5,CIBRPTO+10 TO LIBRPTO+10,CIBRPTO+75;
+                  TITLE " MODIFICAR AREA " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WMODPTO
+SCAT MEMVAR
+@ 00,01 SAY "AREA       :"
+@ 01,01 SAY "DESCRIPCION:"
+@ 02,01 SAY "FIJA? (S/N):"
+@ 00,14 SAY M.CODPTO
+@ 01,14 GET M.DESCRI
+@ 02,14 GET M.FIJO
+READ
+*** INICIO RUTINA DE ACEPTAR-CANCELAR
+store 1 to wop
+do while .t.
+   @ 03,22  get wop pict "@*H Aceptar;Cancelar" defa wop
+   read
+   if lastkey()=13
+      exit
+   endif
+enddo
+*** FIN  RUTINA ACEPTAR-CANCELAR
+if wop=1
+   if recloc()
+      gath memvar
+      unlock all
+   else
+      store "OPERACION CANCELADA, REINTENTE" to wtext
+      do aviso with wtext
+   endif
+endif
+RELEASE WIND WMODPTO
+RETURN
+***
+PROCEDURE BRELI
+DEFI WIND WELIPTO FROM LIBRPTO+5,CIBRPTO+10 TO LIBRPTO+10,CIBRPTO+75;
+                  TITLE " ELIMINAR AREA " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WELIPTO
+SCAT MEMVAR
+@ 00,01 SAY "AREA       :"
+@ 01,01 SAY "DESCRIPCION:"
+@ 00,14 SAY M.CODPTO
+@ 01,14 SAY M.DESCRI
+*** INICIO RUTINA DE ACEPTAR-CANCELAR
+store 2 to wop
+do while .t.
+   @ 03,22  get wop pict "@*H Aceptar;Cancelar" defa wop
+   read
+   if lastkey()=13
+      exit
+   endif
+enddo
+*** FIN  RUTINA ACEPTAR-CANCELAR
+if wop=1
+   if recloc()
+      delete
+      unlock all
+   else
+      store "OPERACION CANCELADA, REINTENTE" to wtext
+      do aviso with wtext
+   endif
+endif
+RELEASE WIND WELIPTO
+RETURN
+***
+PROCEDURE BRBUS
+DEFI WIND WBUSPTO FROM LIBRPTO+5,CIBRPTO+10 TO LIBRPTO+10,CIBRPTO+75;
+                  TITLE " BUSCAR AREA " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WBUSPTO
+DO WHILE .T.
+   SCAT MEMV BLANK
+   @ 00,01 SAY "AREA       :"
+   @ 01,01 SAY "DESCRIPCION:"
+   @ 00,14 GET M.CODPTO
+   READ
+   IF LASTKEY()=27
+      EXIT
+   ENDIF
+   STORE M.CODPTO   TO WCLAVEPTO
+   IF LEN(TRIM(WCLAVEPTO))=0
+      LOOP
+   ENDIF
+   SEEK WCLAVEPTO
+   IF FOUND()
+      EXIT
+   ELSE
+      STORE "NO REGISTRADO, VERIFIQUE" TO WTEXT
+      DO AVISO WITH WTEXT
+   ENDIF
+ENDDO
+RELEASE WIND WBUSPTO
+RETURN
+***
+PROCEDURE BRORD
+* SET ORDER TO ??
+RETURN
+

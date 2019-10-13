@@ -1,0 +1,913 @@
+STORE YEAR(DATE())        TO WANO
+STORE MONTH(DATE())       TO WMES
+STORE VAL(WDIA)           TO WXDIA
+STORE 0                   TO WHORA
+STORE 0                   TO WMINUTO
+STORE " "                 TO WTIPCIT
+STORE " "                 TO WTIPPAC
+STORE CTOD("  -  -    ")  TO WFEC
+DECL ALM(6,7)
+STORE SPACE(30)           TO WNOMBRE
+STORE SPACE(3)            TO WCONSUL
+STORE SPACE(15)           TO WPAPELLIDO
+STORE SPACE(15)           TO WPNOMBRE
+STORE SPACE(10)           TO WCEDIDE
+STORE SPACE(12)           TO WHISTORIA
+STORE CTOD("  -  -    ")  TO WNACIO
+STORE SPACE(1)            TO WSEXO
+STORE 0                   TO WTOTMINUSE
+STORE .T.                 TO WFLAGVER
+
+STORE 0 TO WCOLNUM
+DO WHILE .T.
+   @ 05,00 CLEAR
+   @ 05,00 TO 11,45
+   @ 05,14 SAY "< HACER CITAS >"
+   @ 06,01 SAY "Espec.:"
+   @ 07,01 SAY "Medico:"
+   @ 08,01 SAY "A¤o   :"
+   @ 09,01 SAY "Mes   :"
+   @ 10,01 SAY "Dia   :                       F4=Buscar cupo"
+   STORE .F. TO WFLAGESP
+   @ 06,09 GET WESPECI  VALID VALESP()
+   READ
+   IF LASTKEY()=27.AND..NOT.WFLAGESP
+      RETURN
+   ENDIF
+   DO WHILE .T.
+      STORE .F. TO wflagdoc
+      @ 07,09 GET WMEDICO  VALID VALMED()
+      READ
+      IF LASTKEY()=27.AND..NOT.wflagdoc
+         EXIT
+      ENDIF
+      *** PARA FIJAR EL MEDICO EN ALMANAQUE
+      SELECT SYSMED
+      STORE RECNO() TO WRECMED
+      ***
+      DO WHILE .T.
+         @ 12,00 CLEAR
+         @ 08,09 GET WANO     PICTURE "9999"  VALID VALANO()
+         READ
+         IF LASTKEY()=27
+            EXIT
+         ENDIF
+         DO WHILE .T.
+            @ 12,00 CLEAR
+            @ 09,09 GET WMES     PICTURE "99"    VALID VALMES()
+            READ
+            IF LASTKEY()=27
+               EXIT
+            ENDIF
+            DO WHILE .T.
+               IF WANO=YEAR(DATE()).AND.WMES=MONTH(DATE())
+                  STORE DAY(DATE()) TO WXDIA
+               ELSE
+                  STORE 0           TO WXDIA
+               ENDIF
+               @ 12,00 CLEAR        
+               DO ALMANAQUE
+               ON KEY LABEL F4 DO NEXTCIT
+               @ 10,09 GET WXDIA    PICTURE "99"    VALID VALDIA()
+               READ
+               ON KEY LABEL F4
+               IF LASTKEY()=27
+                  EXIT
+               ENDIF
+               STORE .T. TO WFLAGTC
+               DO WHILE WFLAGTC
+                  @ 12,00 CLEAR
+                  STORE 0 TO WTOTMINMED
+                  STORE 0 TO WLASTHORA
+                  STORE 0 TO WLASTMINU
+                  DO DISPONE
+                  DO AGENDA
+                  ***
+                  ***
+                  IF WTOTMINUSE>=WTOTMINMED
+                     IF WFLAGMED.AND.WMEDICO=SUBST(WUSERCODE,6,3)
+                        STORE "ADVERTENCIA: CUPO BASICO COMPLETO, <ESC>=SALIR, <ENTER>=AGREGAR" TO WTEXT
+                        DO AVISO WITH WTEXT
+                        IF LASTKEY()=27
+                           EXIT
+                        ENDIF
+                     ELSE
+                        STORE "CUPO COMPLETO, INTENTE CON OTRO DIA" TO WTEXT
+                        DO AVISO WITH WTEXT
+                        *EXIT
+                     ENDIF
+                   ENDIF
+                   ***
+                   ***
+                  @ 21,01 GET WTIPCIT                  VALID VALTIP()
+                  READ
+                  IF LASTKEY()=27
+                     EXIT
+                  ENDIF
+                  STORE .T. TO WFLAGHOR
+                  DO WHILE WFLAGHOR 
+                     DO CALHORCI
+                     @ 21,07 SAY ":"
+                     @ 21,05 GET WHORA    PICTURE "99"    VALID VALHOR()
+                     READ
+                     IF LASTKEY()=27
+                        EXIT
+                     ENDIF
+                     @ 21,08 GET WMINUTO  PICTURE "99" RANGE 0,99   VALID VALMIN()
+                     READ
+                     IF LASTKEY()=27
+                        EXIT
+                     ENDIF
+                     STORE .T. TO WFLAGPC
+                     DO WHILE WFLAGPC
+                        STORE SUBSTR(WCODPAC,1,10)      TO WCODPAC1
+                        STORE VAL(SUBSTR(WCODPAC,11,4)) TO WCODPAC2
+                        @ 21,11 GET WCODPAC1
+                        @ 21,21 SAY "-"
+                        @ 21,22 GET WCODPAC2 PICTURE "9999" VALID VALPAC()
+                        READ
+                        IF WCODPAC=SPACE(14)
+                           EXIT
+                        ENDIF
+                        STORE SPACE(15) TO WOBSERVA
+                        @ 21,11 SAY WNOMBRE
+                        *@ 21,65 SAY WCONSUL
+                        @ 21,47 GET WOBSERVA
+                        READ
+                        SELECT CITCIT
+                        IF FILLOC()
+                           APPEND BLANK
+                           UNLOCK ALL
+                           IF RECLOC()
+                              REPLACE MEDICO   WITH WMEDICO
+                              REPLACE FECHA    WITH WFEC
+                              REPLACE HORA     WITH WHORA
+                              REPLACE MINUTO   WITH WMINUTO
+                              REPLACE TIPPAC   WITH WTIPPAC
+                              REPLACE CODPAC   WITH WCODPAC
+                              REPLACE TIPCIT   WITH WTIPCIT
+                              REPLACE CONSUL   WITH WCONSUL
+                              REPLACE OBSERVA  WITH WOBSERVA
+                              REPLACE USERCODE WITH WUSERCODE
+                              REPLACE USERDATE WITH DATE()
+                              UNLOCK ALL
+                              STORE "DESEA IMPRIMIR EN TARJETA ? (S/N)" TO TEX
+                              STORE "NS" TO WCH
+                              DO PREGUNTA
+                              IF WCH="S"
+                                 DO PRINTCIT
+                              ENDIF
+                           ELSE
+                              STORE "OPERACION RECHAZADA, REINTENTE" TO WTEXT
+                              DO AVISO WITH WTEXT
+                           ENDIF
+                        ENDIF
+                        STORE .F. TO WFLAGHOR
+                        STORE .F. TO WFLAGPC
+                     ENDDO
+                  ENDDO
+               ENDDO
+            ENDDO
+         ENDDO
+      ENDDO
+      ***
+   ENDDO
+ENDDO
+*******************************************************************************
+FUNC VALESP
+select SYSESP
+do while .t.
+   if WESPECI<>space(2)
+      seek WESPECI
+      if found()
+         @ 06,15 say SYSESP.DESCRI
+         exit
+      endif
+   endif
+   DEFI WIND WINESP FROM 15,5 TO 23,70;
+             TITLE " ESPECIALIDADES MEDICAS " ;
+             FOOTER "Esc=Seleccionar";
+             DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+   ACTI WIND WINESP
+   BROWSE FIELDS ESPECI:H="ESPECIALIDAD", DESCRI:H="DESCRIPCION";
+          NOAPPEND NODELETE NOEDIT NOMENU NOOPTIMIZE REST SAVE IN WINDOW WINESP
+   RELE WIND WINESP
+   STORE SYSESP.ESPECI TO WESPECI
+   STORE .T. TO WFLAGESP
+enddo
+return .T.
+***********
+FUNC VALMED
+select SYSMED
+do while .t.
+   IF WMEDICO<>space(3)
+      seek WMEDICO
+      if found()
+         @ 07,15 say SYSMED.NOMBRE
+         if sysmed.especi<>wespeci
+            store "MEDICO NO CORRESPONDE CON ESPECIALIDAD SELECCIONADA, REINTENTE" to wtext
+            do aviso with wtext
+            store space(3) to wmedico
+         else
+            store .t. to wflagdoc
+            exit
+         endif
+      endif
+   ELSE
+      DEFI WIND WINMED FROM 15,5 TO 23,70;
+                TITLE " MEDICOS ACTIVOS " ;
+                FOOTER "Esc=Seleccionar";
+                DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+      ACTI WIND WINMED
+      SET ORDER TO SYSMED2
+      BROWSE FIELDS MEDICO:H="MEDICO", NOMBRE:H="NOMBRE", SYSESP.DESCRI:H="ESPECIALIDAD";
+             NOAPPEND NODELETE NOEDIT NOMENU NOOPTIMIZE REST SAVE IN WINDOW WINMED;
+             KEY WESPECI
+      STORE SYSMED.MEDICO TO WMEDICO 
+      SET ORDER TO SYSMED1
+      RELE WIND WINMED
+      IF WMEDICO=SPACE(3)
+         RETURN .F.
+      ENDIF
+   ENDIF
+enddo
+return .t.
+**********
+FUNC VALANO
+IF WANO=YEAR(DATE()).OR.WANO=YEAR(DATE())+1
+   RETURN .T.
+ELSE
+   STORE "SOLO CITAS PARA A¥O ACTUAL Y PROXIMO" TO WTEXT
+   DO AVISO WITH WTEXT
+   RETURN .F.
+ENDIF
+**********
+**********
+FUNC VALMES
+IF WMES <0.OR.WMES>12
+   STORE "SOLO MESES DEL 1 AL 12" TO WTEXT
+   DO AVISO WITH WTEXT
+   RETURN .F.
+ENDIF
+IF (WANO=YEAR(DATE()).AND.WMES>=MONTH(DATE())) .OR. WANO=YEAR(DATE())+1
+   DO CASE
+      CASE WMES=1
+           STORE "Enero     " TO WMESDES
+      CASE WMES=2
+           STORE "Febrero   " TO WMESDES
+      CASE WMES=3
+           STORE "Marzo     " TO WMESDES
+      CASE WMES=4
+           STORE "Abril     " TO WMESDES
+      CASE WMES=5
+           STORE "Mayo      " TO WMESDES
+      CASE WMES=6
+           STORE "Junio     " TO WMESDES
+      CASE WMES=7
+           STORE "Julio     " TO WMESDES
+      CASE WMES=8
+           STORE "Agosto    " TO WMESDES
+      CASE WMES=9
+           STORE "Septiembre" TO WMESDES
+      CASE WMES=10
+           STORE "Octubre   " TO WMESDES
+      CASE WMES=11
+           STORE "Noviembre " TO WMESDES
+      CASE WMES=12
+           STORE "Diciembre " TO WMESDES
+   ENDCASE
+   @ 09,15 SAY WMESDES
+   RETURN .T.
+ELSE
+   STORE "SOLO CITAS PARA A¥O Y MES ACTUAL O PROXIMO" TO WTEXT
+   DO AVISO WITH WTEXT
+   RETURN .F.
+ENDIF
+***********
+FUNC VALDIA
+IF WXDIA<1.OR.WXDIA>31
+   RETURN .F.
+ENDIF
+IF CTOD(STR(WXDIA,2)+"-"+STR(WMES,2)+"-"+STR(WANO,4))<DATE()
+   STORE "SOLO CITAS PARA A¥O, MES Y DIA ACTUAL O PROXIMO" TO WTEXT
+   DO AVISO WITH WTEXT
+   RETURN .F.
+ENDIF
+
+STORE 1 TO WLIN
+STORE 1 TO WCOL
+STORE 0 TO WCOLNUM
+STORE .F. TO WFLAGDIA
+DO WHILE WLIN <=6
+   DO WHILE WCOL<=7
+      IF ALM(WLIN,WCOL) = WXDIA
+         STORE .T.  TO WFLAGDIA
+         STORE WCOL TO WCOLNUM
+      ENDIF
+      STORE WCOL+1 TO WCOL
+   ENDDO
+   STORE 1      TO WCOL
+   STORE WLIN+1 TO WLIN
+ENDDO
+IF WFLAGDIA
+   DO CASE
+      CASE WCOLNUM=1
+           STORE "Domingo     " TO WXDIADES
+      CASE WCOLNUM=2
+           STORE "Lunes       " TO WXDIADES
+      CASE WCOLNUM=3
+           STORE "Martes      " TO WXDIADES
+      CASE WCOLNUM=4
+           STORE "Miercoles   " TO WXDIADES
+      CASE WCOLNUM=5
+           STORE "Jueves      " TO WXDIADES
+      CASE WCOLNUM=6
+           STORE "Viernes     " TO WXDIADES
+      CASE WCOLNUM=7
+           STORE "Sabado      " TO WXDIADES
+      CASE WCOLNUM>7
+           STORE "ERROR EN DIA" TO WXDIADES
+   ENDCASE
+   @ 10,15 SAY WXDIADES
+   RETURN .T.
+ELSE
+   STORE "MEDICO NO DISPONIBLE PARA EL DIA SELECCIONADO" TO WTEXT
+   DO AVISO WITH WTEXT
+   RETURN .F.
+ENDIF
+RETURN
+**************
+PROC ALMANAQUE
+*** LIMPIA
+STORE 1 TO WLIN
+STORE 1 TO WCOL
+DO WHILE WLIN <=6
+   DO WHILE WCOL<=7
+      STORE 0 TO ALM(WLIN,WCOL)
+      STORE WCOL+1 TO WCOL
+   ENDDO
+   STORE 1      TO WCOL
+   STORE WLIN+1 TO WLIN
+ENDDO
+*** CARGA
+STORE 1         TO WLIN
+STORE 1         TO WZDIA
+STORE CTOD(STR(WZDIA,2)+"-"+STR(WMES,2)+"-"+STR(WANO,4)) TO WFEC
+STORE DOW(WFEC) TO WCOL
+STORE 0 TO WCON
+DO WHILE WLIN <=6
+   DO WHILE WCOL <=7
+      STORE WCON+1 TO WCON
+      *** VERIFICA SI ES FECHA VALIDA
+      IF WCON>31
+         EXIT
+      ENDIF
+      STORE WCON TO WZDIA
+      STORE CTOD(STR(WZDIA,2)+"-"+STR(WMES,2)+"-"+STR(WANO,4)) TO WFEC
+      IF WFEC=CTOD("  -  -  ")
+         EXIT
+      ENDIF
+      *** CHEQUEO DE LAPSO DE CITAS (TURNOS MEDICOS)
+      SELECT SYSMED
+      GO WRECMED
+      IF SYSMED.CONLAP>0
+         *STORE ((WFEC-SYSMED.CONINI)-1)/SYSMED.CONLAP  TO WVALLAP
+          STORE ((WFEC-SYSMED.CONINI)+1)/SYSMED.CONLAP  TO WVALLAP
+         *STORE ((WFEC-SYSMED.CONINI)+0)/SYSMED.CONLAP  TO WVALLAP
+         IF WVALLAP>INT(WVALLAP)
+            STORE INT(WVALLAP)+1 TO WVALLAP
+         ENDIF
+         IF (WVALLAP/2)>INT(WVALLAP/2)
+            STORE .T. TO WFLAGLAP
+         ELSE
+            STORE .F. TO WFLAGLAP
+         ENDIF
+      ELSE
+         STORE .T. TO WFLAGLAP
+      ENDIF
+      IF WFLAGLAP
+         *** VERIFICA HORARIO DEL DOCTOR
+         SELECT CITOCU
+         SET ORDER TO CITOCU2
+         STORE WMEDICO+STR(WCOL,1) TO WCLAVEMED
+         SEEK WCLAVEMED
+         IF FOUND()
+            IF SYSMED.USERCODE<>WUSERCODE.AND.LIBRE="N"
+               EXIT
+            ENDIF
+            STORE WCON TO ALM(WLIN,WCOL)
+         ENDIF
+      ENDIF
+      STORE WCOL+1 TO WCOL
+   ENDDO
+   STORE 1 TO WCOL
+   STORE WLIN+1 TO WLIN
+ENDDO
+*** DESPLEGA
+@ 05,46 CLEAR TO 11,79
+@ 12,00 CLEAR TO 20,35
+@ 12,00 TO 20,35
+@ 12,02 SAY "< DIAS DE CONSULTA DEL MEDICO >"
+@ 13,01 SAY "Dom  Lun  Mar  Mie  Jue  Vie  Sab"
+STORE 1 TO WLIN
+STORE 1 TO WCOL
+DO WHILE WLIN <=6
+   DO WHILE WCOL<=7
+      IF ALM(WLIN,WCOL)<>0
+         @ 13+WLIN,WCOL+((WCOL-1)*4) SAY STR(ALM(WLIN,WCOL),2)
+      ENDIF
+      STORE WCOL+1 TO WCOL
+   ENDDO
+   STORE 1      TO WCOL
+   STORE WLIN+1 TO WLIN
+ENDDO
+RETURN
+***********
+PROC AGENDA
+STORE 0   TO WTOTMINUSE
+STORE 100 TO WLINE
+STORE   0 TO WPAGE
+@ 12,0 CLEAR TO 20,79
+@ 12,0       TO 20,79
+@ 12,31 SAY "< AGENDA DEL DIA >"
+@ 13,01 SAY "P/C"
+@ 13,05 SAY "Hr:Mn"
+@ 13,11 SAY "Paciente"
+@ 13,42 SAY "Edad"
+@ 13,47 SAY "Observacion"
+@ 13,65 SAY "Cons."
+@ 13,72 SAY "A/N"
+SELECT CITCIT
+STORE CTOD(STR(WXDIA,2)+"-"+STR(WMES,2)+"-"+STR(WANO,4)) TO WFEC
+STORE WMEDICO+DTOC(WFEC) TO WCLAVEAGE
+SET ORDER TO CITCIT1
+SEEK WCLAVEAGE
+IF FOUND()
+   DO WHILE .NOT.EOF().AND.MEDICO=WMEDICO.AND.FECHA=WFEC
+      STORE WLINE+1 TO WLINE
+      IF WLINE>19
+         STORE WPAGE+1 TO WPAGE
+         IF WPAGE>1.AND..NOT.WFLAGVER
+            STORE "OPRIMA <ENTER> PARA CONTINUAR VISUALIZANDO CITAS" TO WTEXT
+            DO AVISO WITH WTEXT
+         ENDIF
+         @ 14,1 CLEAR TO 19,78
+         STORE 14 TO WLINE
+      ENDIF
+      STORE SPACE(14) TO WXCODPAC
+      STORE SPACE(30) TO WNOMBRE
+      STORE 0         TO WEDAD
+      DO ARMACOD
+      DO ARMANOM
+      SELECT CITCIT
+      @ WLINE,01 SAY CITCIT.TIPCIT
+      @ WLINE,05 SAY STR(HORA,2)+":"+LTRIM(STR(MINUTO,2))
+     *@ WLINE,13 SAY WXCODPAC
+      @ WLINE,11 SAY WNOMBRE
+      @ WLINE,42 SAY WEDAD PICTURE "99.9"
+      @ WLINE,47 SAY CITCIT.OBSERVA
+      @ WLINE,65 SAY CITCIT.CONSUL
+      @ WLINE,75 SAY CITCIT.TIPPAC
+      STORE HORA   TO WLASTHORA
+      STORE MINUTO TO WLASTMINU
+      *** CALCULO DEL TIEMPO CONSUMIDO
+      IF CITCIT.TIPCIT="P"
+         STORE WTOTMINUSE+SYSMED.CON1MIN TO WTOTMINUSE
+      ELSE
+         STORE WTOTMINUSE+SYSMED.CON2MIN TO WTOTMINUSE
+      ENDIF
+      ***
+      SELECT CITCIT
+      SKIP
+   ENDDO
+ENDIF
+RETURN
+************
+PROC DISPONE
+@ 05,46 CLEAR TO 11,79
+@ 05,46       TO 11,79
+@ 05,51 SAY "< HORARIO DE ATENCION >"
+@ 06,47 SAY "Consultorio  Desde  Hasta  Min."
+SELECT CITOCU
+SET ORDER TO 2
+STORE WMEDICO+STR(WCOLNUM,1) TO WCLAVEOCU
+SEEK WCLAVEOCU
+IF FOUND()
+   STORE 100 TO WLINE
+   STORE 0   TO WPAGE
+   DO WHILE .NOT. EOF().AND.MEDICO=WMEDICO.AND.DIA=STR(WCOLNUM,1)
+      STORE WLINE+1 TO WLINE
+      IF WLINE>10
+         STORE WPAGE+1 TO WPAGE
+         IF WPAGE>1
+            STORE "OPRIMA <ENTER> PARA CONTINUAR VISUALIZANDO HORARIO DE ATENCION" TO WTEXT
+            DO AVISO WITH WTEXT
+         ENDIF
+         @ 07,47 CLEAR TO 10,78
+         STORE 07 TO WLINE
+      ENDIF
+      @ WLINE,50 SAY CONSUL
+      @ WLINE,60 SAY STR(DESDEH,2)+":"+LTRIM(STR(DESDEM,2))
+      @ WLINE,67 SAY STR(HASTAH,2)+":"+LTRIM(STR(HASTAM,2))
+      STORE ((HASTAH*60)+HASTAM) - ((DESDEH*60)+DESDEM) TO WMINMED
+      @ WLINE,73 SAY WMINMED PICTURE "9999"
+      STORE WTOTMINMED+WMINMED TO WTOTMINMED
+      STORE DESDEH             TO WLASTHORA
+      STORE DESDEM             TO WLASTMINU
+      SELECT CITOCU
+      SKIP
+   ENDDO
+ENDIF
+RETURN
+**************
+FUNC VALTIP
+IF WTIPCIT<>"P".AND.WTIPCIT<>"C"
+   STORE "TIPOS DE CITAS : C=CONTROL, P=PRIMERA" TO WTEXT
+   DO AVISO WITH WTEXT
+   RETURN .F.
+ELSE
+   RETURN .T.
+ENDIF
+RETURN
+**************
+FUNC VALHOR
+SELECT CITOCU
+SET ORDER TO 2
+STORE WMEDICO+STR(WCOLNUM,1) TO WCLAVEOCU
+SEEK WCLAVEOCU
+IF FOUND()
+   DO WHILE .NOT. EOF().AND.MEDICO=WMEDICO.AND.DIA=STR(WCOLNUM,1)
+      IF (DESDEH<=WHORA.AND.WHORA<=HASTAH)
+         STORE CONSUL TO WCONSUL
+         RETURN .T.
+      ENDIF
+      SKIP
+   ENDDO
+   STORE "MEDICO NO ATIENTE A LA HORA SELECCIONADA, REINTENTE" TO WTEXT
+   DO AVISO WITH WTEXT
+   RETURN .F.
+ENDIF
+*IF WCONSUL=SPACE(3)
+*   @ 21,65 GET WCONSUL
+*   READ
+*ENDIF
+RETURN .F.
+***********
+FUNC VALMIN
+***********
+SELECT CITCIT
+STORE CTOD(STR(WXDIA,2)+"-"+STR(WMES,2)+"-"+STR(WANO,4)) TO WFEC
+STORE WMEDICO+DTOC(WFEC)+STR(WHORA,2)+STR(WMINUTO,2)     TO WCLAVECIT
+SET ORDER TO CITCIT1
+SEEK WCLAVECIT
+IF FOUND()
+   @ 23,0 SAY "HORA Y MINUTOS YA OCUPADOS, ELIMINAR CITA ?"
+   store 1 to wop
+   do while .t.
+      @ 23,45  get wop pict "@*H No ;Si " defa wop
+      read
+      if lastkey()=13
+         exit
+      endif
+   enddo
+   @ 23,0
+   IF WOP = 2 
+      IF CITCIT.USERCODE=WUSERCODE
+         *.OR..NOT.WFLAGMED
+         IF RECLOC()
+            REPLACE USERCODE WITH WUSERCODE
+            REPLACE USERDATE WITH DATE()
+            DELETE
+            UNLOCK ALL
+            STORE 0 TO WTOTMINMED
+            STORE 0 TO WLASTHORA
+            STORE 0 TO WLASTMINU
+            DO AGENDA
+         ELSE
+            STORE "OPERACION RECHAZADA, REINTENTE" TO WTEXT
+            DO AVISO WITH WTEXT
+         ENDIF
+      ELSE
+         STORE "OPERACION RECHAZADA, SOLO PUEDE ELIMINAR CITAS EFECTUADAS POR USTED." TO WTEXT
+         DO AVISO WITH WTEXT
+      ENDIF
+   ENDIF
+   RETURN .F.
+ELSE
+   IF WMINUTO>59
+      RETURN .F.
+   ENDIF
+   IF WTOTMINUSE>=WTOTMINMED
+      IF WFLAGMED.AND.WMEDICO=SUBST(WUSERCODE,6,3)
+         DO WHILE .T.
+            STORE "ADVERTENCIA: CUPO BASICO COMPLETO, <ESC>=SALIR, <ENTER>=AGREGAR" TO WTEXT
+            DO AVISO WITH WTEXT
+            IF LASTKEY()=27
+               RETURN .F.
+            ELSE
+               IF LASTKEY()=13
+                  RETURN .T.
+               ENDIF
+            ENDIF
+         ENDDO
+      ELSE
+         STORE "CUPO COMPLETO, INTENTE CON OTRO DIA" TO WTEXT
+         DO AVISO WITH WTEXT
+         RETURN .F.
+      ENDIF
+   ELSE
+      RETURN .T.
+   ENDIF
+ENDIF
+RETURN .T.
+****************
+PROCEDURE VALPAC
+****************
+STORE WCODPAC1+STR(WCODPAC2,4) TO WCODPAC
+IF SUBSTR(WCODPAC,1,1)="*"
+   SELECT AFIAFI
+   SET ORDER TO AFIAFI4
+   SEEK SUBSTR(WCODPAC,2,9)+SPACE(3)
+   IF FOUND()
+      STORE CEDTITU+CARGA TO WCODPAC
+   ELSE
+      SELECT CITPAC
+      SET ORDER TO SYSPAC3
+      SEEK SUBSTR(WCODPAC,2,9)+SPACE(3)
+      IF FOUND()
+         STORE CODPAC    TO WCODPAC
+      ELSE
+         STORE SPACE(14) TO WCODPAC
+      ENDIF
+   ENDIF
+ENDIF
+***
+SELECT AFIAFI
+SET ORDER TO AFIAFI1
+SEEK WCODPAC
+IF .NOT. FOUND()
+   SELECT CITPAC
+   SET ORDER TO 1
+   *SET ORDER TO SYSPAC
+   SEEK WCODPAC
+   IF .NOT. FOUND()
+      STORE 5 TO LIBRPAC
+      STORE 0 TO CIBRPAC
+      STORE WCODPAC TO M.CODPAC
+      DO CITPAC
+      STORE SUBSTR(CODPAC,1,10)                        TO WCODPAC1
+      STORE VAL(SUBSTR(CODPAC,11,4))                   TO WCODPAC2
+      STORE WCODPAC1+STR(WCODPAC2,4)                   TO WCODPAC
+      STORE "N"                                        TO WTIPPAC
+      STORE ALLTRIM(PAPELLIDO)+", "+ALLTRIM(PNOMBRE)   TO WNOMBRE
+      STORE SUBSTR(WCODPAC,1,10)                       TO WCEDIDE
+      STORE HISTORIA                                   TO WHISTORIA
+      STORE NACIMIENTO                                 TO WNACIO
+      STORE SEXO                                       TO WSEXO
+      RETURN .T.
+      *STORE "PACIENTE NO REGISTRADO EN AFILIADOS NI EN NO-AFILIADOS, VERIFIQUE" TO WTEXT
+      *DO AVISO WITH WTEXT
+      *RETURN .F.
+   ELSE
+      STORE "N"                                        TO WTIPPAC
+      STORE ALLTRIM(PAPELLIDO)+", "+ALLTRIM(PNOMBRE)   TO WNOMBRE
+      STORE SUBSTR(WCODPAC,1,10)                       TO WCEDIDE
+      STORE HISTORIA                                   TO WHISTORIA
+      STORE NACIMIENTO                                 TO WNACIO
+      STORE SEXO                                       TO WSEXO
+   ENDIF
+ELSE
+   STORE "A"                                           TO WTIPPAC
+   STORE ALLTRIM(PAPELLIDO)+", "+ALLTRIM(PNOMBRE)      TO WNOMBRE
+   STORE CEDAFI                                        TO WCEDIDE
+   STORE HISTORIA                                      TO WHISTORIA
+   STORE NACIMIENTO                                    TO WNACIO
+   STORE SEXO                                          TO WSEXO
+ENDIF
+RETURN .T.
+*************
+PROC PRINTCIT
+SAVE SCRE TO WSCREPRI
+DO WHILE .T.
+   @ 13,01 CLEAR  TO 19,78
+   @ 15,20        TO 19,60
+   STORE "N"      TO WIDEN
+   STORE 0        TO WHOJA
+   STORE 0        TO WLINE
+   @ 15,24 SAY "< TARJETA DE CONTROL DE CITAS >"
+   @ 16,24 SAY "IMPRIMIR IDENTIFICADOR ? (S/N):"
+   @ 17,24 SAY "IMPRIMIR CITA EN HOJA (1/2)   :"
+   @ 18,24 SAY "IMPRIMIR CITA EN LINEA (1/12) :"
+   @ 16,56 GET WIDEN VALID VALIDE()
+   @ 17,56 GET WHOJA PICTURE "9"  VALID VALHOJ()
+   @ 18,56 GET WLINE PICTURE "99" VALID VALLIN()
+   READ
+   IF LASTKEY()=27
+      LOOP
+   ENDIF
+   IF WIDEN="S"
+      SET DEVI TO SCRE
+      STORE "INSERTE TARJETA PARA IMPRIMIR IDENTIFICADOR (PORTADA)" TO WTEXT
+      DO AVISO WITH WTEXT
+      SET DEVI TO PRINT
+      @ PROW(), PCOL() SAY CHR(18)
+      @ PROW(), PCOL() SAY CHR(27)+CHR(67)+CHR(33)
+      IF WTIPPAC="A"
+         @ 10,50 SAY CHR(14)+"AFILIADO"
+      ELSE
+         @ 10,50 SAY CHR(14)+"NO-AFILIADO"
+      ENDIF
+      @ 10,00  SAY CHR(15)
+      @ 11,75  SAY "Codigo  :"+ALLTRIM(SUBSTR(WCODPAC,1,10))+"-"+ALLTRIM(SUBSTR(WCODPAC,11,4))
+      @ 11,100 SAY "Historia:"+WHISTORIA
+      @ 12,75  SAY "Cedula  :"+WCEDIDE
+      @ 14,75  SAY "Nombre  :"+WNOMBRE
+      @ 15,75  SAY "Nacido  :"+DTOC(WNACIO)
+      @ 16,75  SAY "Sexo    :"+WSEXO
+      @ PROW(), PCOL() SAY CHR(27)+CHR(67)+CHR(66)
+      @ PROW(), PCOL() SAY CHR(18)
+      EJECT
+   ENDIF
+   IF WHOJA=1
+      STORE 0  TO WTAB
+   ELSE
+      STORE 74 TO WTAB
+   ENDIF
+   IF WLINE<=04
+      STORE 0 TO WADD
+   ELSE
+      IF WLINE<=08
+         STORE 1 TO WADD
+      ELSE
+         IF WLINE<=12
+            STORE 2 TO WADD
+         ELSE
+            STORE 3 TO WADD
+         ENDIF
+      ENDIF
+   ENDIF
+   *** SELECCION DEL TIPO DE HORA A IMPRIMIR EN TARJETA DE CITAS
+   ***
+   *** DETERMINA LA HORA DE INICIO CORRESPONDIENTE DEL MEDICO PARA LA HORA DE LA CITA
+   STORE 0 TO WPRIMHOR
+   STORE 0 TO WPRIMMIN
+   DO PRIMHOR
+   *** SELECCIONA SI ES HORA REAL O 7 AM o 1 PM
+   IF WPRIMHOR>12
+      STORE WPRIMHOR-12 TO WXHORA
+      STORE WPRIMMIN    TO WXMINU
+      STORE 1           TO WFHORA
+      STORE "PM"        TO WAMPM
+   ELSE
+      STORE WPRIMHOR    TO WXHORA
+      STORE WPRIMMIN    TO WXMINU
+      STORE 7           TO WFHORA
+      STORE "AM"        TO WAMPM
+   ENDIF
+   ***
+   SET DEVI TO SCRE
+   STORE "INSERTE TARJETA PARA IMPRIMIR CITA " TO WTEXT
+   DO AVISO WITH WTEXT
+   SET DEVI TO PRINT
+   @ PROW(), PCOL()            SAY CHR(18)
+   @ PROW(), PCOL()            SAY CHR(27)+CHR(67)+CHR(33)
+   @ WLINE,70                  SAY CHR(15)
+   @ (WLINE*2)+WADD+2,WTAB+01  SAY SUBSTR(SYSESP.DESCRI,1,18)
+   @ (WLINE*2)+WADD+2,WTAB+21  SAY WFEC
+   @ (WLINE*2)+WADD+2,WTAB+36  SAY STR(WXHORA,2)+":"+ALLTRIM(STR(WXMINU,2))+" "+WAMPM+"."
+   @ (WLINE*2)+WADD+2,WTAB+46  SAY SUBSTR(SYSMED.NOMBRE,1,17)
+   @ PROW(), PCOL()            SAY CHR(27)+CHR(67)+CHR(66)
+   @ PROW(), PCOL()            SAY CHR(18)
+   EJECT
+   SET DEVI TO SCRE
+   STORE "CONFORME CON IMPRESION ? (S/N)" TO TEX
+   STORE "SN" TO WCH
+   DO PREGUNTA
+   IF WCH="S"
+      EXIT
+   ENDIF
+ENDDO
+SET DEVI TO SCRE
+RESTORE SCRE FROM WSCREPRI
+RETURN
+***********
+FUNC VALIDE
+STORE UPPER(WIDEN) TO WIDEN
+IF WIDEN="S".OR.WIDEN="N"
+   RETURN .T.
+ELSE
+   STORE "OPCIONES: S=Si, N=No" TO WTEXT
+   DO AVISO WITH WTEXT
+   RETURN .F.
+ENDIF
+***********
+FUNC VALHOJ
+IF WHOJA=1.OR.WHOJA=2
+   RETURN .T.
+ELSE
+   STORE "OPCIONES: 1=Primera cara de la tarjeta, 2=Segunda cara de la tarjeta" TO WTEXT
+   DO AVISO WITH WTEXT
+   RETURN .F.
+ENDIF
+***********
+FUNC VALLIN
+IF WLINE>=1.AND.WLINE<=12
+   RETURN .T.
+ELSE
+   STORE "Seleccione del 1 al 12 para la proxima linea desocupada en la tarjeta" TO WTEXT
+   DO AVISO WITH WTEXT
+   RETURN .F.
+ENDIF
+****************
+PROC PRIMHOR
+SELECT CITOCU
+STORE RECNO() TO WRECOCU
+SET ORDER TO 2
+STORE WMEDICO+STR(WCOLNUM,1) TO WCLAVEOCU
+SEEK WCLAVEOCU
+IF FOUND()
+   DO WHILE .NOT. EOF().AND.MEDICO=WMEDICO.AND.DIA=STR(WCOLNUM,1)
+      IF DESDEH<=WHORA.AND.HASTAH>=WHORA
+         STORE DESDEH  TO WPRIMHOR
+         STORE DESDEM  TO WPRIMMIN
+      ENDIF
+      SELECT CITOCU
+      SKIP
+   ENDDO
+ENDIF
+SELECT CITOCU
+GO WRECOCU
+RETURN
+**************
+PROC CALHORCI
+**************
+*** CALCULO DE LA HORA DE LA PROXIMA CITA
+IF WTIPCIT="P"
+   STORE SYSMED.CON1MIN TO WCONMIN
+ELSE
+   STORE SYSMED.CON2MIN TO WCONMIN
+ENDIF
+STORE WLASTMINU+WCONMIN TO WTOTCONMIN
+IF WTOTCONMIN>59
+   STORE WLASTHORA+1    TO WHORA
+   STORE WTOTCONMIN-60  TO WMINUTO
+ELSE
+   STORE WLASTHORA      TO WHORA
+   STORE WTOTCONMIN     TO WMINUTO
+ENDIF
+RETURN
+************
+PROC NEXTCIT
+************
+STORE "INGRESE EL TIPO DE CITA A UBICAR" TO WTEXT
+DO MENSAJE WITH WTEXT
+@ 21,01 SAY "Indique el tipo de cita a buscar (P,C)" GET WTIPCIT VALID VALTIP()
+READ
+@ 21,01
+IF LASTKEY()=27
+   RETURN
+ENDIF
+IF WTIPCIT="P"
+   STORE SYSMED.CON1MIN TO WCONXMIN
+ELSE
+   STORE SYSMED.CON2MIN TO WCONXMIN
+ENDIF
+IF ( YEAR(DATE())=WANO.AND.MONTH(DATE())=WMES ) .AND. WXDIA=0
+   STORE DAY(DATE()) TO WXDIA
+ENDIF
+STORE WXDIA TO WSTART
+STORE 1     TO WLIN
+STORE 1     TO WCOL
+STORE .T.   TO WFLAGVER
+DO WHILE WLIN <=6
+   DO WHILE WCOL<=7
+      IF ALM(WLIN,WCOL)<>0.AND.ALM(WLIN,WCOL)>=WSTART
+         STORE 0    TO WTOTMINMED
+         STORE WCOL TO WCOLNUM
+         DO DISPONE
+         STORE 0 TO WTOTMINUSE
+         STORE ALM(WLIN,WCOL) TO WXDIA
+         DO AGENDA
+         IF WTOTMINUSE<WTOTMINMED
+             STORE WTOTMINMED-WTOTMINUSE TO WFREETIME
+             IF WFREETIME>=WCONXMIN
+                CLEAR GETS
+                @ 10,09 SAY WXDIA    PICTURE "99"
+                *@ 10,09 GET WXDIA    PICTURE "99"
+                *READ
+                *DO ALMANAQUE
+                STORE .F. TO WFLAGVER
+                RETURN
+             ENDIF
+         ENDIF
+      ENDIF
+      STORE WCOL+1 TO WCOL
+   ENDDO
+   STORE 1      TO WCOL
+   STORE WLIN+1 TO WLIN
+ENDDO
+STORE "NO HAY CUPO PARA ESTE MES, INTENTE CON MES PROXIMO" TO WTEXT
+DO AVISO WITH WTEXT
+STORE .F. TO WFLAGVER
+RETURN
+***********

@@ -1,0 +1,255 @@
+IF WACCESO<>"A"
+   RETURN
+ENDIF
+SELECT 20
+USE
+*** FIN CONTROL DE ACCESO
+DO WHILE .T.
+   ON KEY LABEL F1
+   ON KEY LABEL F2
+   ON KEY LABEL F3
+   ON KEY LABEL F4
+   
+   ***
+   STORE 5  TO LIBRGRU
+   STORE 5  TO CIBRGRU
+   DO HISWINGR
+   
+   ***
+   STORE 6  TO LIBRSUB
+   STORE 5  TO CIBRSUB
+   DO HISWINSU
+   IF EOF().OR.ESTSUB=" "
+      EXIT
+   ENDIF
+   IF ESTSUB<>"T"
+      STORE "SUBACTIVIDAD SELECCIONADA NO ESTA DEFINIDA CON ESTRUCTURA TABULADA" TO WTEXT
+      DO AVISO WITH WTEXT
+      DEACT WIND ALL
+      RETURN
+   ENDIF
+
+   ***
+   STORE 7  TO LIBRREN
+   STORE 5  TO CIBRREN
+   SELECT HISREN
+   ON KEY LABEL F1 DO BRINC
+   ON KEY LABEL F2 DO BRMOD
+   ON KEY LABEL F3 DO BRELI
+   ON KEY LABEL F4 DO BRBUS
+   DEFI WIND BRREN FROM LIBRREN,CIBRREN TO LIBRREN+10,CIBRREN+65 ;
+                   TITLE " SUBACTIVIDAD "+RTRIM(HISSUB.DESSUB)+" ";
+                   FOOTER " F1=Inc,F2=Mod,F3=Eli,F4=Bus,ESC=Sel ";
+                   DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+   ACTI WIND BRREN
+   BROWSE FIELDS CODREN:H="RENGLON", DESREN:H="DESCRIPCION", ESTREN:H="ESTRUCTURA";
+                 FOR CODGRU=HISGRU.CODGRU.AND.CODSUB=HISSUB.CODSUB;
+                 NOAPPEND NODELETE NOEDIT NOMENU NOOPTIMIZE REST SAVE IN WINDOW BRREN
+   *** INICIO RUTINA DE ACEPTAR-CANCELAR
+   store 1 to wop
+   do while .t.
+      @ 4,15 get wop pict "@*H Continuar;Abandonar" defa wop
+      read
+      if lastkey()=13
+         exit
+      endif
+   enddo
+   IF WOP=2
+      EXIT
+   ENDIF
+   **** FIN  RUTINA ACEPTAR-CANCELAR
+ENDDO
+RELEASE WIND BRGRU
+RELEASE WIND BRSUB
+RELEASE WIND BRREN
+ON KEY LABEL F1
+ON KEY LABEL F2
+ON KEY LABEL F3
+ON KEY LABEL F4
+ON KEY LABEL F10
+RETURN
+***********************
+***                 ***
+***RUTINAS DE BRREN ***
+***                 ***
+***********************
+PROCEDURE BRINC
+DEFI WIND WINCREN FROM LIBRREN+1,CIBRREN TO LIBRREN+15,CIBRREN+90;
+                  TITLE " INCLUIR RENGLON " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WINCREN
+DO WHILE .T.
+   SCAT MEMV BLANK
+   STORE HISGRU.CODGRU TO M.CODGRU
+   STORE HISSUB.CODSUB TO M.CODSUB
+   @ 00,00 CLEAR
+   @ 00,01 SAY "RENGLON    :"
+   @ 02,01 SAY "ESTRUCTURA :"
+   @ 03,01 SAY "LINEAS      :"
+   @ 04,01 SAY "COLUMNAS    :"
+   @ 05,01 SAY "TIPO DE DATO:"
+   @ 06,01 SAY "VALIDO DESDE:"
+   @ 07,01 SAY "VALIDO HASTA:"
+   @ 08,01 SAY "UNIDAD      :"
+   @ 09,01 SAY "VALOR NORMAL:"
+   @ 00,14 GET M.CODREN
+   READ
+   IF LASTKEY()=27
+      EXIT
+   ENDIF
+   STORE M.CODGRU+M.CODSUB+M.CODREN TO WCLAVE
+   IF LEN(TRIM(WCLAVE))=0
+      LOOP
+   ENDIF
+   SEEK WCLAVE
+   IF FOUND()
+      @ 00,18 SAY DESREN
+      STORE "YA EXISTE, VERIFIQUE" TO WTEXT
+      DO AVISO WITH WTEXT
+      LOOP
+   ELSE
+      @ 00,18 GET M.DESREN
+      @ 02,14 GET M.ESTREN
+      @ 03,14 GET M.LONREN pict "99"
+      @ 04,14 GET M.ANCREN pict "99"
+      @ 05,14 GET M.TIPVAL
+      @ 06,14 GET M.VL1REN
+      @ 07,14 GET M.VL2REN
+      @ 08,14 GET M.UNDREN
+      @ 09,14 GET M.VALNOR
+      READ
+      *** INICIO RUTINA DE ACEPTAR-CANCELAR
+      store 1 to wop
+      do while .t.
+         @ 11,18  get wop pict "@*H Aceptar;Cancelar" defa wop
+         read
+         if lastkey()=13
+            exit
+         endif
+      enddo
+      *** FIN  RUTINA ACEPTAR-CANCELAR
+      if wop=1
+         if filloc()
+            append blank
+            gath memvar
+            unlock all
+         else
+            store "OPERACION CANCELADA, REINTENTE" to wtext
+            do aviso with wtext
+         endif
+      endif
+   ENDIF
+ENDDO
+RELEASE WIND WINCREN
+RETURN
+********************
+PROCEDURE BRMOD
+DEFI WIND WMODREN FROM LIBRREN+1,CIBRREN TO LIBRREN+15,CIBRREN+90;
+                  TITLE " MODIFICAR RENGLON " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WMODREN
+SCAT MEMV
+@ 00,00 CLEAR
+@ 00,01 SAY "RENGLON    :"
+@ 02,01 SAY "ESTRUCTURA :"
+@ 03,01 SAY "LINEAS      :"
+@ 04,01 SAY "COLUMNAS    :"
+@ 05,01 SAY "TIPO DE DATO:"
+@ 06,01 SAY "VALIDO DESDE:"
+@ 07,01 SAY "VALIDO HASTA:"
+@ 08,01 SAY "UNIDAD      :"
+@ 09,01 SAY "VALOR NORMAL:"
+@ 00,14 SAY M.CODREN
+@ 00,18 GET M.DESREN
+@ 02,14 GET M.ESTREN
+@ 03,14 GET M.LONREN pict "99"
+@ 04,14 GET M.ANCREN pict "99"
+@ 05,14 GET M.TIPVAL
+@ 06,14 GET M.VL1REN
+@ 07,14 GET M.VL2REN
+@ 08,14 GET M.UNDREN
+@ 09,14 GET M.VALNOR
+READ
+*** INICIO RUTINA DE ACEPTAR-CANCELAR
+store 1 to wop
+do while .t.
+   @ 11,18  get wop pict "@*H Aceptar;Cancelar" defa wop
+   read
+   if lastkey()=13
+      exit
+   endif
+enddo
+*** FIN  RUTINA ACEPTAR-CANCELAR
+if wop=1
+   if recloc()
+      gath memvar
+      unlock all
+   else
+      store "OPERACION CANCELADA, REINTENTE" to wtext
+      do aviso with wtext
+   endif
+endif
+RELEASE WIND WMODREN
+RETURN
+********************
+PROCEDURE BRELI
+DEFI WIND WELIREN FROM LIBRSUB+1,CIBRSUB TO LIBRSUB+7,CIBRSUB+70;
+                  TITLE " ELIMINAR RENGLON   " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WELIREN
+SCAT MEMV
+@ 00,00 CLEAR
+@ 00,01 SAY "RENGLON    :"
+@ 00,14 SAY M.CODREN
+@ 00,18 SAY M.DESREN
+*** INICIO RUTINA DE ACEPTAR-CANCELAR
+store 1 to wop
+do while .t.
+   @ 02,18  get wop pict "@*H Aceptar;Cancelar" defa wop
+   read
+   if lastkey()=13
+      exit
+   endif
+enddo
+*** FIN  RUTINA ACEPTAR-CANCELAR
+if wop=1
+   if filloc()
+      delete
+      unlock all
+   else
+      store "OPERACION CANCELADA, REINTENTE" to wtext
+      do aviso with wtext
+   endif
+endif
+RELEASE WIND WELIREN
+RETURN
+***************
+PROCEDURE BRBUS
+DEFI WIND WBUSREN FROM LIBRREN+1,CIBRREN TO LIBRREN+7,CIBRREN+70;
+                  TITLE " BUSCAR RENGLON " DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WBUSREN
+SCAT MEMV BLANK
+STORE HISGRU.CODGRU TO M.CODGRU
+STORE HISSUB.CODSUB TO M.CODSUB
+@ 00,00 CLEAR
+@ 00,01 SAY "RENGLON    :"
+@ 00,14 GET M.CODREN
+READ
+IF LASTKEY()=27
+   RELEASE WIND WBUSREN
+   RETURN
+ENDIF
+STORE M.CODGRU+M.CODSUB+M.CODREN TO WCLAVE
+IF LEN(TRIM(WCLAVE))=0
+   RELEASE WIND WBUSREN
+   RETURN
+ENDIF
+SEEK WCLAVE
+IF FOUND()
+   RELEASE WIND WBUSREN
+   RETURN
+ELSE
+   store "NO REGISTRADO, VERIFIQUE" to wtext
+   do aviso with wtext
+ENDIF
+RELEASE WIND WBUSREN
+RETURN
+********************
+

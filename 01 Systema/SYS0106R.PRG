@@ -1,0 +1,105 @@
+SET TALK OFF
+SET ECHO OFF
+DEFI WIND WINREPLIS FROM 10,10 TO 16,70; 
+          TITLE "IMPRIMIR LISTA";
+          DOUBLE NOFLOAT NOZOOM NOGROW SHADOW COLOR SCHEME 10
+ACTI WIND WINREPLIS
+
+STORE SPACE(5) TO WCODFILTRO
+@ 00,01 SAY "CODIGO DE TP-ES:" 
+@ 00,20 GET WCODFILTRO 
+READ
+IF LASTKEY()=27
+   RELE WIND WINREPLIS
+   RETURN
+ENDIF
+
+STORE SPACE(1) TO WCODPRECIO
+@ 02,01 SAY "LISTA DE PRECIO:" 
+@ 02,20 GET WCODPRECIO VALID VALPRE() 
+READ
+IF LASTKEY()=27
+   RELE WIND WINREPLIS
+   RETURN
+ENDIF
+
+store 1 to wop
+do while .t.
+   @ 04,20  get wop pict "@*H Aceptar;Cancelar" defa wop
+   read
+   if lastkey()=13
+      exit
+   endif
+enddo
+rele wind winreplis
+if lastkey()=27.or.wop=2
+   return
+endif
+
+STORE 0 TO WPAGE
+STORE 0 TO WLINE
+STORE RECNO() TO WSTARTREC
+SET DEVI TO PRINT
+DO SALTO
+SELECT SYSSERVI
+GO TOP
+DO WHILE .NOT. EOF()
+   IF WCODFILTRO<>"     ".AND.WCODFILTRO<>SUBSTR(SERVICIO,1,5)
+      SKIP
+      LOOP
+   ENDIF
+   STORE WLINE + 1 TO WLINE
+   IF WLINE > 55
+      DO SALTO
+   ENDIF
+   @ WLINE,00     SAY SERVICIO
+   @ WLINE,14     SAY DESCRI 
+   IF LEN(RTRIM(SERVICIO))=12
+      IF WCODPRECIO="A"
+         @ WLINE,65  SAY PRECIOA
+      ENDIF
+      IF WCODPRECIO="B"
+         @ WLINE,65  SAY PRECIOB
+      ENDIF
+      IF WCODPRECIO="C"
+         @ WLINE,65  SAY PRECIOC
+      ENDIF
+      IF WCODPRECIO="D"
+         @ WLINE,65  SAY PRECIOD
+      ENDIF
+      IF WCODPRECIO="E"
+         @ WLINE,65  SAY PRECIOE
+      ENDIF
+   ENDIF
+   SKIP
+ENDDO
+SET DEVI TO SCRE
+GO WSTARTREC
+RETURN
+**********
+PROC SALTO
+**********
+@ 00,00  SAY CHR(18)+CHR(14)+QQWW
+@ 01,00  SAY CHR(18)+"Lista de precios de servicios"
+@ 03,00  SAY CHR(18)
+@ 03,00  SAY "Codigo"
+@ 03,14  SAY "Descripcion"
+@ 03,65  SAY "Precio "+WCODPRECIO
+@ 04,00  SAY "------------"
+@ 04,14  SAY "--------------------------------------------------"
+@ 04,65  SAY "--------"
+STORE 5 TO WLINE
+RETURN
+***********
+FUNC VALPRE
+***********
+IF WCODPRECIO="A".OR.;
+   WCODPRECIO="B".OR.;
+   WCODPRECIO="C".OR.;
+   WCODPRECIO="D".OR.;
+   WCODPRECIO="E" 
+   RETURN .T.
+ELSE
+   RETURN .F.
+ENDIF
+RETURN

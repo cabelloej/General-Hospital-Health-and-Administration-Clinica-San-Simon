@@ -1,0 +1,199 @@
+*** ESTADO DE CUENTAS POR PAGAR
+SET COLOR TO W+/BG+
+SELECT COMCXP
+STORE .T. TO R0201
+DO WHILE R0201
+   STORE 0 TO WMONTO
+   @ 04,00 CLEAR
+   @ 04,20 SAY "LISTADO DE ESTADO DE CUENTAS POR PAGAR"
+   @ 05,00 TO 22,79
+   @ 06,5 SAY  "BENEFICIARIO  :"
+   @ 07,5 SAY  "REFERENCIA    :"
+   @ 08,5 SAY  "VENCE DESDE   :"
+   @ 09,5 SAY  "VENCE HASTA   :"
+   @ 10,5 SAY  "CANCEL. DESDE :"
+   @ 11,5 SAY  "CANCEL. HASTA :"
+      
+   @ 13,5 SAY    "* SALIDA *"
+   @ 14,5 SAY    "MONITOR ...1"
+   @ 15,5 SAY    "IMPRESORA..2"
+   @ 16,5 SAY    "          [ ]"
+   STORE 1         TO WSALIDA
+   STORE SPACE(12) TO WBENEFI
+   STORE SPACE(9)  TO WBEN
+   STORE "CODIGO DEL BENEFICIARIO" TO MES
+   DO MENSAJE WITH MES
+   @ 06,22 GET WBENEFI
+   READ
+   IF LASTKEY()=27
+      RETURN
+   ENDIF
+   IF WBENEFI=SPACE(12)
+      STORE "Todos" TO WBEN
+      @ 06,42 SAY WBEN
+   ENDIF
+   STORE SPACE(10) TO WREFER
+   STORE "CODIGO DE DOCUMENTO REFERENCIAL" TO MES
+   DO MENSAJE WITH MES
+   @ 07,22 GET WREFER
+   READ
+   IF WREFER=SPACE(10)
+      @ 07,42 SAY "Todos"
+   ENDIF
+   *STORE CTOD("01-"+STR(MONTH(DATE()),2)+"-"+STR(YEAR(DATE()),2))  TO WVENDES
+   *STORE DATE()                                                    TO WVENHAS
+   STORE CTOD("  -  -  ")  TO WVENDES
+   STORE CTOD("  -  -  ")  TO WVENHAS
+   DO WHILE .T.
+      STORE "RANGO DE FECHAS DE CUENTAS VENCIDAS" TO MES
+      DO MENSAJE WITH MES
+      @ 08,22 GET WVENDES
+      @ 09,22 GET WVENHAS
+      READ
+      IF WVENHAS<WVENDES
+         STORE "ERROR EN RANGO DE FECHAS, VERIFIQUE" TO MES
+         DO AVISO WITH MES
+         LOOP
+      ELSE
+         EXIT
+      ENDIF
+   ENDDO
+   STORE CTOD("  -  -  ") TO WCANDES
+   STORE CTOD("  -  -  ") TO WCANHAS
+   DO WHILE .T.
+      STORE "RANGO DE FECHAS DE CUENTAS CANCELADAS" TO MES
+      DO MENSAJE WITH MES
+      @ 10,22 GET WCANDES
+      @ 11,22 GET WCANHAS
+      READ
+      IF WCANHAS<WCANDES
+         STORE "ERROR EN RANGO DE FECHAS, VERIFIQUE" TO MES
+         DO AVISO WITH MES
+         LOOP
+      ELSE
+         EXIT
+      ENDIF
+   ENDDO
+
+   @ 16,16 GET WSALIDA PICT "#" RANGE 1,2
+   READ
+   IF WSALIDA=1
+      @ 16,42 SAY "Monitor"
+   ELSE
+      @ 16,42 SAY "Impresora"
+   ENDIF
+
+   SAVE SCRE TO INF1
+   STORE "CONTINUAR ? (S/N)" TO TEX
+   STORE "SN" TO WCH
+   DO PREGUNTA
+   IF WCH = "N"
+     RETURN
+   ENDIF
+   STORE 0 TO PAGINA
+   STORE 100 TO LINE
+   IF WSALIDA = 1
+      STORE 22 TO WSALTO
+      @ 0,0 CLEAR
+   ELSE
+      SET DEVI TO PRINT
+      STORE 60 TO WSALTO
+   ENDIF
+
+   SELECT COMCXP
+   GO TOP
+   DO WHILE .NOT. EOF()
+      IF WBENEFI<>SPACE(12).AND.BENEFI<>WBENEFI
+         SELECT COMCXP
+         SKIP
+         LOOP
+      ENDIF
+      IF WREFER<>SPACE(10).AND.REFERENCIA<>WREFER
+         SELECT COMCXP
+         SKIP
+         LOOP
+      ENDIF
+      **** FILTROS
+      IF WVENDES<>CTOD("  -  -  ").AND.(VENCE<WVENDES.OR.VENCE>WVENHAS)
+            SELECT COMCXP
+            SKIP
+            LOOP
+      ENDIF
+      IF WVENHAS<>CTOD("  -  -  ").AND.(CANCELADO<WCANDES.OR.CANCELADO>WCANHAS)
+         SELECT COMCXP
+         SKIP
+         LOOP
+      ENDIF
+   
+      STORE LINE+1 TO LINE
+      IF LINE >= WSALTO
+         STORE PAGINA + 1 TO PAGINA
+         IF WSALIDA=1 .AND. PAGINA<>1
+            STORE "CONTINUAR ? (S/N)" TO TEX
+            STORE "SN" TO WCH
+            DO PREGUNTA
+            IF WCH = "N"
+               RETURN
+            ENDIF
+            @ 0,0 CLEAR
+         ENDIF
+        
+         @ 1,0   SAY QQWW
+         @ 1,60  SAY "FECHA :"+DTOC(DATE())
+         @ 2,0   SAY "LISTADO DE ESTADO DE CUENTAS POR PAGAR"
+         @ 2,60  SAY "PAGINA:"+STR(PAGINA,2)
+         @ 3,00  SAY "BENEF: "+WBEN
+         IF WREFER=SPACE(10)
+            @ 3,16  SAY "REFER: Todas"
+         ELSE
+            @ 3,16 SAY "REFER: "+WREFER
+         ENDIF
+         IF WVENDES=CTOD("  -  -  ").AND.WVENHAS=CTOD("  -  -  ")
+            @ 3,36  SAY "VENCIMIENTO DEL: TODAS"
+         ELSE
+            @ 3,36  SAY "VENCIMIENTO DEL: "+DTOC(WVENDES)+" AL "+DTOC(WVENHAS)
+         ENDIF
+         IF WCANDES=CTOD("  -  -  ").AND.WCANHAS=CTOD("  -  -  ")
+            @ 4,36  SAY "CANCELADAS  DEL: TODAS"
+         ELSE
+            @ 4,36  SAY "CANCELADAS  DEL: "+DTOC(WCANDES)+" AL "+DTOC(WCANHAS)
+         ENDIF
+         
+         @ 06,00 SAY "BENEF."
+         @ 06,15 SAY "REFERENCIA"
+         @ 06,29 SAY "VENCE"
+         @ 06,43 SAY "CANCELADO"
+         @ 06,53 SAY "         MONTO"
+         @ 7,0   SAY REPLICATE("-",80)
+         STORE 8 TO LINE
+      ENDIF
+      @ LINE,0  SAY BENEFI
+      @ LINE,15 SAY REFERENCIA
+      @ LINE,29 SAY VENCE
+      @ LINE,43 SAY CANCELADO
+      @ LINE,55 SAY TOTDOC
+      WMONTO=WMONTO+TOTDOC
+      SKIP
+   ENDDO
+      
+   *** COLOCAR TOTALES
+   *******************
+   IF WMONTO > 0
+       STORE LINE+2 TO LINE
+       @ LINE,53 SAY "=============="
+       STORE LINE+1 TO LINE
+       @ LINE,35 SAY "MONTO TOTAL:"
+       @ LINE,54 SAY WMONTO    
+   ENDIF
+   IF WSALIDA = 2
+       SET DEVI TO SCRE
+       EJECT
+   ELSE
+       STORE "OPRIMA (Ù) PARA FINALIZAR" TO MES
+       DO AVISO WITH MES
+       RESTORE SCRE FROM INF1 
+   ENDIF
+ENDDO
+RETURN
+
+

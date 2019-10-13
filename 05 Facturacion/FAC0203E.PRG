@@ -1,0 +1,36 @@
+STORE "SEGURO? (S/N)" TO TEX
+*STORE "NS" TO WCH
+STORE "N"   TO WCH
+DO PREGUNTA
+IF WCH = "S"
+  SELECT FACCXC
+  IF FILLOC()
+     *REPLACE ORIGEN      WITH "CXC"
+     *REPLACE DEPTO       WITH WUSERUBI
+     REPLACE USUARIO      WITH WUSERCODE
+     REPLACE USUARIOF     WITH DATE()
+     STORE CODCXC         TO WDELCXC
+     DELETE
+     UNLOCK
+     FLUSH
+     SELECT FACCXCTR
+     SET ORDER TO FACCXCT1
+     DO WHILE .T.
+        SEEK WDELCXC
+        IF FOUND()
+           IF FILLOC()
+              *REPLACE ORIGEN      WITH "CXC"
+              *REPLACE DEPTO       WITH WUSERUBI
+              REPLACE USUARIO     WITH WUSERCODE
+              REPLACE USUARIOF    WITH DATE()
+              DELETE
+              UNLOCK ALL
+              FLUSH
+           ENDIF
+        ELSE
+           EXIT
+        ENDIF
+     ENDDO
+  ENDIF
+ENDIF
+
